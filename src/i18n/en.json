@@ -1,0 +1,31 @@
+{
+  "app_name": "SocialBharat",
+  "nav": {
+    "dashboard": "Dashboard",
+    "publishing": "Publishing",
+    "inbox": "Inbox",
+    "analytics": "Analytics",
+    "listening": "Listening",
+    "media": "Media",
+    "ai_studio": "AI Studio",
+    "settings": "Settings"
+  },
+  "auth": {
+    "sign_in": "Sign In",
+    "sign_up": "Sign Up",
+    "email": "Email",
+    "password": "Password",
+    "forgot_password": "Forgot password?",
+    "no_account": "Don't have an account?",
+    "have_account": "Already have an account?"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success"
+  }
+}
