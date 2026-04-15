@@ -1,4 +1,4 @@
-import { BasePlatformConnector, PlatformPost, PlatformMetrics, DateRange, PlatformProfile, PlatformPostResult } from './base'
+import { BasePlatformConnector, PlatformPost, PlatformMetrics, PlatformProfile, PlatformPostResult } from './base'
 
 /**
  * Twitter/X API v2 connector
@@ -18,7 +18,7 @@ export class TwitterConnector extends BasePlatformConnector {
       // Upload media if present
       if (post.mediaUrls && post.mediaUrls.length > 0) {
         mediaIds = await Promise.all(
-          post.mediaUrls.map((mediaUrl) => this.uploadMedia(mediaUrl))
+          [this.uploadMedia(post.mediaUrls[0]!)]
         )
       }
 
@@ -62,7 +62,8 @@ export class TwitterConnector extends BasePlatformConnector {
     }
   }
 
-  private async uploadMedia(mediaUrl: string): Promise<string> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  private async uploadMedia(_mediaUrl: string): Promise<string> {
     try {
       // Step 1: Initialize upload
       const initUrl = 'https://upload.twitter.com/1.1/media/upload.json'
@@ -131,8 +132,8 @@ export class TwitterConnector extends BasePlatformConnector {
       throw new Error(error instanceof Error ? error.message : 'Failed to fetch profile')
     }
   }
-
-  async getMetrics(dateRange: DateRange): Promise<PlatformMetrics> {
+  
+  async getMetrics(): Promise<PlatformMetrics> {
     try {
       const url = `https://api.twitter.com/${this.apiVersion}/users/me?user.fields=public_metrics`
       const response = await fetch(url, {

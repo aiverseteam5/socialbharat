@@ -130,7 +130,8 @@ export class YouTubeConnector extends BasePlatformConnector {
     }
   }
 
-  async getMetrics(dateRange: DateRange): Promise<PlatformMetrics> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async getMetrics(_dateRange: DateRange): Promise<PlatformMetrics> {
     try {
       const url = `https://www.googleapis.com/youtube/${this.apiVersion}/channels?part=statistics&id=${this.channelId}`
       const response = await fetch(url, {

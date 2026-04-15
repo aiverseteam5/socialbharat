@@ -7,17 +7,16 @@ import { NextRequest, NextResponse } from 'next/server'
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    
-    const profileId = params.id
     
     // Get user's organization
     const { data: orgMember } = await supabase
@@ -37,7 +36,7 @@ export async function DELETE(
     const { data: profile } = await supabase
       .from('social_profiles')
       .select('org_id')
-      .eq('id', profileId)
+      .eq('id', id)
       .single()
     
     if (!profile || profile.org_id !== orgId) {
@@ -48,7 +47,7 @@ export async function DELETE(
     const { error } = await supabase
       .from('social_profiles')
       .delete()
-      .eq('id', profileId)
+      .eq('id', id)
     
     if (error) {
       throw error

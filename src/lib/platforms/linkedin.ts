@@ -174,7 +174,8 @@ export class LinkedInConnector extends BasePlatformConnector {
     }
   }
 
-  async getMetrics(dateRange: DateRange): Promise<PlatformMetrics> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async getMetrics(_dateRange: DateRange): Promise<PlatformMetrics> {
     try {
       const url = `https://api.linkedin.com/${this.apiVersion}/organizationalEntityStatistics?q=organization&organizationalEntity=${this.organizationUrn}`
       const response = await fetch(url, {

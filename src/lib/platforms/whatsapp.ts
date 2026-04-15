@@ -1,4 +1,4 @@
-import { BasePlatformConnector, PlatformProfile, PlatformMetrics, DateRange } from './base'
+import { BasePlatformConnector, PlatformProfile, PlatformMetrics } from './base'
 
 /**
  * WhatsApp Cloud API connector

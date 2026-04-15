@@ -1,14 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
 import { decrypt } from '@/lib/encryption'
 import { getPlatformConnector } from '@/lib/platforms'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 
 /**
  * GET /api/connectors/profiles
  * List all connected social profiles for the current organization
  * Includes decrypted token health status
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
