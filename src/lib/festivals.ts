@@ -1,13 +1,14 @@
-import { createClient } from './supabase/server'
+import { createClient } from "./supabase/server";
+import { logger } from "./logger";
 
 export interface IndianFestival {
-  id: string
-  name: string
-  name_hindi: string | null
-  date: string
-  region: string | null
-  hashtags: string[]
-  description: string | null
+  id: string;
+  name: string;
+  name_hindi: string | null;
+  date: string;
+  region: string | null;
+  hashtags: string[];
+  description: string | null;
 }
 
 /**
@@ -16,32 +17,35 @@ export interface IndianFestival {
  * @param region - Optional region filter
  * @returns Array of upcoming festivals
  */
-export async function getUpcomingFestivals(days: number = 14, region?: string): Promise<IndianFestival[]> {
-  const supabase = await createClient()
-  
-  const now = new Date()
-  const futureDate = new Date()
-  futureDate.setDate(now.getDate() + days)
-  
+export async function getUpcomingFestivals(
+  days: number = 14,
+  region?: string,
+): Promise<IndianFestival[]> {
+  const supabase = await createClient();
+
+  const now = new Date();
+  const futureDate = new Date();
+  futureDate.setDate(now.getDate() + days);
+
   let query = supabase
-    .from('indian_festivals')
-    .select('*')
-    .gte('date', now.toISOString().split('T')[0])
-    .lte('date', futureDate.toISOString().split('T')[0])
-    .order('date', { ascending: true })
-  
+    .from("indian_festivals")
+    .select("*")
+    .gte("date", now.toISOString().split("T")[0])
+    .lte("date", futureDate.toISOString().split("T")[0])
+    .order("date", { ascending: true });
+
   if (region) {
-    query = query.eq('region', region)
+    query = query.eq("region", region);
   }
-  
-  const { data: festivals, error } = await query
-  
+
+  const { data: festivals, error } = await query;
+
   if (error) {
-    console.error('Error fetching festivals:', error)
-    return []
+    logger.error("Error fetching upcoming festivals", error, { days, region });
+    return [];
   }
-  
-  return (festivals || []) as IndianFestival[]
+
+  return (festivals || []) as IndianFestival[];
 }
 
 /**
@@ -49,21 +53,23 @@ export async function getUpcomingFestivals(days: number = 14, region?: string): 
  * @param festivalId - The festival ID
  * @returns Festival details or null
  */
-export async function getFestivalById(festivalId: string): Promise<IndianFestival | null> {
-  const supabase = await createClient()
-  
+export async function getFestivalById(
+  festivalId: string,
+): Promise<IndianFestival | null> {
+  const supabase = await createClient();
+
   const { data: festival, error } = await supabase
-    .from('indian_festivals')
-    .select('*')
-    .eq('id', festivalId)
-    .single()
-  
+    .from("indian_festivals")
+    .select("*")
+    .eq("id", festivalId)
+    .single();
+
   if (error) {
-    console.error('Error fetching festival:', error)
-    return null
+    logger.error("Error fetching festival by id", error, { festivalId });
+    return null;
   }
-  
-  return festival as IndianFestival | null
+
+  return festival as IndianFestival | null;
 }
 
 /**
@@ -71,19 +77,21 @@ export async function getFestivalById(festivalId: string): Promise<IndianFestiva
  * @param date - Date in YYYY-MM-DD format
  * @returns Array of festivals for the date
  */
-export async function getFestivalsByDate(date: string): Promise<IndianFestival[]> {
-  const supabase = await createClient()
-  
+export async function getFestivalsByDate(
+  date: string,
+): Promise<IndianFestival[]> {
+  const supabase = await createClient();
+
   const { data: festivals, error } = await supabase
-    .from('indian_festivals')
-    .select('*')
-    .eq('date', date)
-    .order('name', { ascending: true })
-  
+    .from("indian_festivals")
+    .select("*")
+    .eq("date", date)
+    .order("name", { ascending: true });
+
   if (error) {
-    console.error('Error fetching festivals by date:', error)
-    return []
+    logger.error("Error fetching festivals by date", error, { date });
+    return [];
   }
-  
-  return (festivals || []) as IndianFestival[]
+
+  return (festivals || []) as IndianFestival[];
 }
