@@ -18,7 +18,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint            # ESLint must exit 0
       - run: pnpm type-check      # tsc --noEmit must exit 0
-      - run: pnpm test --coverage # Vitest — 80% floor
+      - run: pnpm test:coverage   # Vitest — 80% floor
       - run: pnpm build           # Production build must succeed
 
   e2e:
