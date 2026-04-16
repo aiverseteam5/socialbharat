@@ -139,6 +139,12 @@
 
 ## Phase 4: Billing & Payments
 
+### Infrastructure prerequisites
+
+- [ ] **P4-INFRA-01**: Wire up a production trigger for `/api/cron/publish` (scheduler). Vercel Hobby blocks sub-daily crons, so `vercel.json` has no `crons` block as of the Phase 3 deploy. Options in priority order: (a) Upstash QStash hitting the endpoint every minute (free tier sufficient), (b) cron-job.org external trigger, (c) upgrade to Vercel Pro and restore `vercel.json` `{ "crons": [{ "path": "/api/cron/publish", "schedule": "* * * * *" }] }`. Protect the endpoint with a `CRON_SECRET` bearer token — without an external trigger, scheduled posts never auto-publish. Required before paid customers start scheduling posts.
+
+---
+
 - [ ] **P4-01**: Create Supabase migration: `plan_limits` table with seed data, `invoices` table with RLS
 - [ ] **P4-02**: Create `src/lib/razorpay.ts` — Razorpay client, create order, verify payment
 - [ ] **P4-03**: Create `src/lib/gst.ts` — GST calculator (CGST/SGST for intra-state, IGST for inter-state, 18% rate)
