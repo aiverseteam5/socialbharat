@@ -1,65 +1,66 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
-import { Sparkles, Loader2 } from 'lucide-react'
-import { usePublishing } from '@/hooks/usePublishing'
+import { useState } from "react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Sparkles, Loader2 } from "lucide-react";
+import { usePublishing } from "@/hooks/usePublishing";
+import { logger } from "@/lib/logger";
 
 export function AIContentAssist() {
-  const [prompt, setPrompt] = useState('')
-  const [generatedContent, setGeneratedContent] = useState('')
-  const [isGenerating, setIsGenerating] = useState(false)
-  const { setContent, language, tone, setLanguage, setTone } = usePublishing()
-  
+  const [prompt, setPrompt] = useState("");
+  const [generatedContent, setGeneratedContent] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const { setContent, language, tone, setLanguage, setTone } = usePublishing();
+
   const handleGenerate = async () => {
-    if (!prompt.trim()) return
-    
-    setIsGenerating(true)
+    if (!prompt.trim()) return;
+
+    setIsGenerating(true);
     try {
-      const response = await fetch('/api/ai/generate-content', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/ai/generate-content", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt,
-          platform: 'facebook',
+          platform: "facebook",
           language,
           tone,
           include_hashtags: true,
           include_emoji: true,
         }),
-      })
-      
-      const data = await response.json()
-      setGeneratedContent(data.content)
+      });
+
+      const data = await response.json();
+      setGeneratedContent(data.content);
     } catch (error) {
-      console.error('Error generating content:', error)
+      logger.error("AI content generation failed", error);
     } finally {
-      setIsGenerating(false)
+      setIsGenerating(false);
     }
-  }
-  
+  };
+
   const handleUseContent = () => {
-    setContent(generatedContent)
-    setGeneratedContent('')
-    setPrompt('')
-  }
-  
+    setContent(generatedContent);
+    setGeneratedContent("");
+    setPrompt("");
+  };
+
   return (
     <Card className="p-6 space-y-4">
       <div className="flex items-center gap-2">
         <Sparkles className="w-5 h-5 text-purple-600" />
         <h3 className="font-semibold">AI Content Assist</h3>
       </div>
-      
+
       <Textarea
         placeholder="Describe what you want to post about..."
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
         rows={3}
       />
-      
+
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="text-sm font-medium mb-1 block">Language</label>
@@ -76,7 +77,7 @@ export function AIContentAssist() {
             <option value="mr">Marathi</option>
           </select>
         </div>
-        
+
         <div>
           <label className="text-sm font-medium mb-1 block">Tone</label>
           <select
@@ -92,7 +93,7 @@ export function AIContentAssist() {
           </select>
         </div>
       </div>
-      
+
       <Button
         onClick={handleGenerate}
         disabled={!prompt.trim() || isGenerating}
@@ -110,7 +111,7 @@ export function AIContentAssist() {
           </>
         )}
       </Button>
-      
+
       {generatedContent && (
         <div className="space-y-2">
           <label className="text-sm font-medium">Generated Content</label>
@@ -119,11 +120,15 @@ export function AIContentAssist() {
             onChange={(e) => setGeneratedContent(e.target.value)}
             rows={4}
           />
-          <Button onClick={handleUseContent} variant="outline" className="w-full">
+          <Button
+            onClick={handleUseContent}
+            variant="outline"
+            className="w-full"
+          >
             Use This Content
           </Button>
         </div>
       )}
     </Card>
-  )
+  );
 }

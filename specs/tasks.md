@@ -1,4 +1,5 @@
 # Tasks — Atomic Task List
+
 # SocialBharat — Each task is independently testable
 
 ## Phase 0: Project Scaffold
@@ -37,7 +38,7 @@
 - [ ] **P1-07**: Create `src/lib/msg91.ts` — MSG91 OTP send/verify helper
 - [ ] **P1-08**: Create `POST /api/auth/otp/send` — validate phone with Zod, generate OTP, store in cache (Supabase or Upstash), send via MSG91
 - [ ] **P1-09**: Create `POST /api/auth/otp/verify` — validate OTP, create/find Supabase user, return session
-- [ ] **P1-10**: Create `src/middleware.ts` — protect /dashboard/* routes, redirect unauthenticated to /login, redirect authenticated away from /login
+- [ ] **P1-10**: Create `src/middleware.ts` — protect /dashboard/\* routes, redirect unauthenticated to /login, redirect authenticated away from /login
 - [ ] **P1-11**: Create `src/lib/auth.ts` — `getUser()`, `getSession()`, `requireAuth()`, `requireRole()` server-side helpers
 - [ ] **P1-12**: Create `src/app/(auth)/login/page.tsx` — phone OTP tab + email/password tab + Google OAuth button
 - [ ] **P1-13**: Create `src/app/(auth)/register/page.tsx` — registration form with phone-first, email option
@@ -105,6 +106,14 @@
 
 ## Phase 3: Engagement Hub
 
+### Tech debt (carried from Phase 2)
+
+- [ ] **P3-TD-01**: Extract `checkAiRateLimit()` into `src/lib/ratelimit.ts` and import into both AI routes — trigger when first new AI route is added in Phase 3. Currently duplicated in `src/app/api/ai/generate-content/route.ts` and `src/app/api/ai/hashtags/route.ts`.
+- [ ] **P3-TD-02**: Expand `src/lib/scheduler.ts` unit tests — current `tests/lib/scheduler.test.ts` only covers the empty-posts path. Add mocked-supabase tests for: publish-success, publish-failure, partially_failed, and no-profiles cases. Then add `src/lib/scheduler.ts` back to `vitest.config.ts` coverage.include.
+- [ ] **P3-TD-03**: Generate a real `META_WEBHOOK_VERIFY_TOKEN` (random 32+ char secret via `openssl rand -hex 32`), set it in `.env.local` / Vercel, and register the same value in the Meta app dashboard webhook subscription. Currently a placeholder — blocks the `/api/webhooks/meta` verification handshake. Required before P3-02 can be wired to Meta for live FB/IG/WhatsApp message ingestion.
+
+---
+
 - [ ] **P3-01**: Create Supabase migration: `contacts`, `conversations`, `messages` tables with RLS
 - [ ] **P3-02**: Create `POST /api/webhooks/meta` — handle incoming FB/IG/WhatsApp messages, verify signature
 - [ ] **P3-03**: Create `POST /api/webhooks/twitter` — handle incoming Twitter DMs/mentions
@@ -129,6 +138,12 @@
 ---
 
 ## Phase 4: Billing & Payments
+
+### Infrastructure prerequisites
+
+- [ ] **P4-INFRA-01**: Wire up a production trigger for `/api/cron/publish` (scheduler). Vercel Hobby blocks sub-daily crons, so `vercel.json` has no `crons` block as of the Phase 3 deploy. Options in priority order: (a) Upstash QStash hitting the endpoint every minute (free tier sufficient), (b) cron-job.org external trigger, (c) upgrade to Vercel Pro and restore `vercel.json` `{ "crons": [{ "path": "/api/cron/publish", "schedule": "* * * * *" }] }`. Protect the endpoint with a `CRON_SECRET` bearer token — without an external trigger, scheduled posts never auto-publish. Required before paid customers start scheduling posts.
+
+---
 
 - [ ] **P4-01**: Create Supabase migration: `plan_limits` table with seed data, `invoices` table with RLS
 - [ ] **P4-02**: Create `src/lib/razorpay.ts` — Razorpay client, create order, verify payment

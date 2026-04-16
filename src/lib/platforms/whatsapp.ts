@@ -1,15 +1,21 @@
-import { BasePlatformConnector, PlatformProfile, PlatformMetrics } from './base'
+import {
+  BasePlatformConnector,
+  PlatformProfile,
+  PlatformMetrics,
+  ReplyContext,
+  PlatformReplyResult,
+} from "./base";
 
 /**
  * WhatsApp Cloud API connector
  * Supports sending messages, templates, broadcasts, and parsing webhooks
  */
 export class WhatsAppConnector extends BasePlatformConnector {
-  private phoneNumberId: string
+  private phoneNumberId: string;
 
   constructor(accessToken: string, phoneNumberId: string) {
-    super(accessToken)
-    this.phoneNumberId = phoneNumberId
+    super(accessToken);
+    this.phoneNumberId = phoneNumberId;
   }
 
   /**
@@ -20,35 +26,37 @@ export class WhatsAppConnector extends BasePlatformConnector {
    */
   async sendMessage(to: string, message: string): Promise<string> {
     try {
-      const url = `https://graph.facebook.com/v19.0/${this.phoneNumberId}/messages`
-      
+      const url = `https://graph.facebook.com/v19.0/${this.phoneNumberId}/messages`;
+
       const body = {
-        messaging_product: 'whatsapp',
+        messaging_product: "whatsapp",
         to: to,
-        type: 'text',
+        type: "text",
         text: {
           body: message,
         },
-      }
+      };
 
       const response = await fetch(url, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${this.accessToken}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.accessToken}`,
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(body),
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (data.error) {
-        throw new Error(data.error.message)
+        throw new Error(data.error.message);
       }
 
-      return data.messages[0].id
+      return data.messages[0].id;
     } catch (error) {
-      throw new Error(error instanceof Error ? error.message : 'Failed to send message')
+      throw new Error(
+        error instanceof Error ? error.message : "Failed to send message",
+      );
     }
   }
 
@@ -64,45 +72,47 @@ export class WhatsAppConnector extends BasePlatformConnector {
     to: string,
     templateName: string,
     language: string,
-    components?: unknown[]
+    components?: unknown[],
   ): Promise<string> {
     try {
-      const url = `https://graph.facebook.com/v19.0/${this.phoneNumberId}/messages`
-      
+      const url = `https://graph.facebook.com/v19.0/${this.phoneNumberId}/messages`;
+
       const body: Record<string, unknown> = {
-        messaging_product: 'whatsapp',
+        messaging_product: "whatsapp",
         to: to,
-        type: 'template',
+        type: "template",
         template: {
           name: templateName,
           language: {
             code: language,
           },
         },
-      }
+      };
 
       if (components) {
-        ;(body.template as Record<string, unknown>).components = components
+        (body.template as Record<string, unknown>).components = components;
       }
 
       const response = await fetch(url, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${this.accessToken}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.accessToken}`,
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(body),
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (data.error) {
-        throw new Error(data.error.message)
+        throw new Error(data.error.message);
       }
 
-      return data.messages[0].id
+      return data.messages[0].id;
     } catch (error) {
-      throw new Error(error instanceof Error ? error.message : 'Failed to send template')
+      throw new Error(
+        error instanceof Error ? error.message : "Failed to send template",
+      );
     }
   }
 
@@ -116,13 +126,13 @@ export class WhatsAppConnector extends BasePlatformConnector {
   async sendBroadcast(
     recipients: string[],
     templateName: string,
-    language: string
+    language: string,
   ): Promise<string> {
     try {
-      const url = `https://graph.facebook.com/v19.0/${this.phoneNumberId}/message_broadcasts`
-      
+      const url = `https://graph.facebook.com/v19.0/${this.phoneNumberId}/message_broadcasts`;
+
       const body = {
-        messaging_product: 'whatsapp',
+        messaging_product: "whatsapp",
         to: recipients,
         template: {
           name: templateName,
@@ -130,26 +140,28 @@ export class WhatsAppConnector extends BasePlatformConnector {
             code: language,
           },
         },
-      }
+      };
 
       const response = await fetch(url, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${this.accessToken}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.accessToken}`,
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(body),
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (data.error) {
-        throw new Error(data.error.message)
+        throw new Error(data.error.message);
       }
 
-      return data.id
+      return data.id;
     } catch (error) {
-      throw new Error(error instanceof Error ? error.message : 'Failed to send broadcast')
+      throw new Error(
+        error instanceof Error ? error.message : "Failed to send broadcast",
+      );
     }
   }
 
@@ -158,49 +170,60 @@ export class WhatsAppConnector extends BasePlatformConnector {
    * @param payload - Raw webhook payload from WhatsApp
    * @returns Parsed message data
    */
-  handleWebhook(payload: unknown): { from: string; message: string; timestamp: number } {
-    const data = payload as Record<string, unknown>
-    const entry = data.entry as Array<Record<string, unknown>>
-    const changes = entry?.[0]?.changes as Array<Record<string, unknown>>
-    const value = changes?.[0]?.value as Record<string, unknown>
-    const messages = value?.messages as Array<Record<string, unknown>>
-    const message = messages?.[0] as Record<string, unknown>
+  handleWebhook(payload: unknown): {
+    from: string;
+    message: string;
+    timestamp: number;
+  } {
+    const data = payload as Record<string, unknown>;
+    const entry = data.entry as Array<Record<string, unknown>>;
+    const changes = entry?.[0]?.changes as Array<Record<string, unknown>>;
+    const value = changes?.[0]?.value as Record<string, unknown>;
+    const messages = value?.messages as Array<Record<string, unknown>>;
+    const message = messages?.[0] as Record<string, unknown>;
 
-    const from = message.from as string
-    const text = (message.text as Record<string, unknown>)?.body as string
-    const timestamp = parseInt(message.timestamp as string, 10)
+    const from = message.from as string;
+    const text = (message.text as Record<string, unknown>)?.body as string;
+    const timestamp = parseInt(message.timestamp as string, 10);
 
-    return { from, message: text, timestamp }
+    return { from, message: text, timestamp };
   }
 
   // WhatsApp doesn't support post publishing like other platforms
   async publishPost(): Promise<never> {
-    throw new Error('WhatsApp does not support post publishing. Use sendMessage, sendTemplate, or sendBroadcast.')
+    throw new Error(
+      "WhatsApp does not support post publishing. Use sendMessage, sendTemplate, or sendBroadcast.",
+    );
   }
 
   async deletePost(): Promise<never> {
-    throw new Error('WhatsApp does not support post deletion.')
+    throw new Error("WhatsApp does not support post deletion.");
   }
 
   async getProfile(): Promise<PlatformProfile> {
     try {
-      const url = `https://graph.facebook.com/v19.0/${this.phoneNumberId}`
-      const response = await fetch(`${url}?fields=name,verified_profile_picture_url`, {
-        headers: {
-          'Authorization': `Bearer ${this.accessToken}`,
+      const url = `https://graph.facebook.com/v19.0/${this.phoneNumberId}`;
+      const response = await fetch(
+        `${url}?fields=name,verified_profile_picture_url`,
+        {
+          headers: {
+            Authorization: `Bearer ${this.accessToken}`,
+          },
         },
-      })
+      );
 
-      const data = await response.json()
+      const data = await response.json();
 
       return {
         id: data.id,
         name: data.name,
         avatarUrl: data.verified_profile_picture_url,
         platformUserId: data.id,
-      }
+      };
     } catch (error) {
-      throw new Error(error instanceof Error ? error.message : 'Failed to fetch profile')
+      throw new Error(
+        error instanceof Error ? error.message : "Failed to fetch profile",
+      );
     }
   }
 
@@ -211,25 +234,52 @@ export class WhatsAppConnector extends BasePlatformConnector {
       engagement: 0,
       reach: 0,
       impressions: 0,
-    }
+    };
   }
 
   async checkTokenHealth(): Promise<boolean> {
     try {
-      const url = `https://graph.facebook.com/v19.0/${this.phoneNumberId}`
+      const url = `https://graph.facebook.com/v19.0/${this.phoneNumberId}`;
       const response = await fetch(url, {
         headers: {
-          'Authorization': `Bearer ${this.accessToken}`,
+          Authorization: `Bearer ${this.accessToken}`,
         },
-      })
+      });
 
-      return !response.ok ? false : true
+      return !response.ok ? false : true;
     } catch {
-      return false
+      return false;
     }
   }
 
   async refreshToken(): Promise<string> {
-    return this.accessToken
+    return this.accessToken;
+  }
+
+  async sendReply(
+    context: ReplyContext,
+    text: string,
+  ): Promise<PlatformReplyResult> {
+    try {
+      if (!context.recipientPlatformId) {
+        throw new Error(
+          "recipientPlatformId (phone number) required for WhatsApp reply",
+        );
+      }
+      const messageId = await this.sendMessage(
+        context.recipientPlatformId,
+        text,
+      );
+      return { platformMessageId: messageId, status: "sent" };
+    } catch (error) {
+      return {
+        platformMessageId: "",
+        status: "failed",
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to send WhatsApp reply",
+      };
+    }
   }
 }

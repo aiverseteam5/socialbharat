@@ -1,12 +1,15 @@
-import { Sidebar } from '@/components/layout/Sidebar'
-import { Header } from '@/components/layout/Header'
-import { MobileNav } from '@/components/layout/MobileNav'
+import { Sidebar } from "@/components/layout/Sidebar";
+import { Header } from "@/components/layout/Header";
+import { MobileNav } from "@/components/layout/MobileNav";
+import { requireAuth } from "@/lib/auth";
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
+  await requireAuth();
+
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar />
@@ -18,5 +21,5 @@ export default function DashboardLayout({
       </div>
       <MobileNav />
     </div>
-  )
+  );
 }
