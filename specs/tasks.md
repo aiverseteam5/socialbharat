@@ -110,6 +110,7 @@
 
 - [ ] **P3-TD-01**: Extract `checkAiRateLimit()` into `src/lib/ratelimit.ts` and import into both AI routes — trigger when first new AI route is added in Phase 3. Currently duplicated in `src/app/api/ai/generate-content/route.ts` and `src/app/api/ai/hashtags/route.ts`.
 - [ ] **P3-TD-02**: Expand `src/lib/scheduler.ts` unit tests — current `tests/lib/scheduler.test.ts` only covers the empty-posts path. Add mocked-supabase tests for: publish-success, publish-failure, partially_failed, and no-profiles cases. Then add `src/lib/scheduler.ts` back to `vitest.config.ts` coverage.include.
+- [ ] **P3-TD-03**: Generate a real `META_WEBHOOK_VERIFY_TOKEN` (random 32+ char secret via `openssl rand -hex 32`), set it in `.env.local` / Vercel, and register the same value in the Meta app dashboard webhook subscription. Currently a placeholder — blocks the `/api/webhooks/meta` verification handshake. Required before P3-02 can be wired to Meta for live FB/IG/WhatsApp message ingestion.
 
 ---
 

@@ -167,6 +167,25 @@ export const addConversationTagsSchema = z.object({
   tags: z.array(z.string().max(50)).min(1),
 });
 
+export const listConversationsSchema = z.object({
+  platform: z
+    .enum(["facebook", "instagram", "twitter", "linkedin", "whatsapp"])
+    .optional(),
+  status: z.enum(["open", "assigned", "closed", "snoozed"]).optional(),
+  assigned_to: z.string().uuid().optional(),
+  search: z.string().max(100).optional(),
+  cursor: z.string().datetime().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+export const updateConversationSchema = z.object({
+  status: z.enum(["open", "assigned", "closed", "snoozed"]).optional(),
+  assigned_to: z.string().uuid().nullable().optional(),
+  tags: z.array(z.string().max(50)).optional(),
+  sentiment_score: z.number().min(-1).max(1).optional(),
+  language_detected: z.string().length(2).optional(),
+});
+
 // ============================================
 // ANALYTICS SCHEMAS
 // ============================================
@@ -265,7 +284,16 @@ export const generateHashtagsSchema = z.object({
 });
 
 export const suggestRepliesSchema = z.object({
-  message: z.string().min(1).max(2000),
+  conversation_id: z.string().uuid(),
+  messages: z
+    .array(
+      z.object({
+        role: z.enum(["contact", "agent", "system"]),
+        content: z.string().max(4000),
+      }),
+    )
+    .min(1)
+    .max(20),
   language: z.enum(["en", "hi", "ta", "te", "bn", "mr"]).default("en"),
   tone: z
     .enum(["professional", "casual", "friendly", "hinglish"])
@@ -429,6 +457,8 @@ export const schemas = {
     assign: assignConversationSchema,
     status: updateConversationStatusSchema,
     tags: addConversationTagsSchema,
+    list: listConversationsSchema,
+    update: updateConversationSchema,
   },
   analytics: { dateRange: dateRangeSchema, report: createReportSchema },
   ai: {

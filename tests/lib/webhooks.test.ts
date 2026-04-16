@@ -3,6 +3,8 @@ import { createHmac } from "crypto";
 import {
   verifyRazorpaySignature,
   verifyMetaSignature,
+  verifyTwitterSignature,
+  twitterCrcResponseToken,
 } from "@/lib/webhooks/verify";
 
 const SECRET = "test-webhook-secret";
@@ -80,5 +82,50 @@ describe("verifyMetaSignature", () => {
 
   it("returns false when app secret is empty", () => {
     expect(verifyMetaSignature(BODY, header(BODY, SECRET), "")).toBe(false);
+  });
+});
+
+describe("twitterCrcResponseToken", () => {
+  it("returns sha256=<base64> for a given crc_token + consumer secret", () => {
+    const crc = "test-crc-token";
+    const expected =
+      "sha256=" + createHmac("sha256", SECRET).update(crc).digest("base64");
+    expect(twitterCrcResponseToken(crc, SECRET)).toBe(expected);
+  });
+});
+
+describe("verifyTwitterSignature", () => {
+  const twitterSign = (body: string, secret: string) =>
+    "sha256=" + createHmac("sha256", secret).update(body).digest("base64");
+
+  it("returns true for a valid signature", () => {
+    expect(
+      verifyTwitterSignature(BODY, twitterSign(BODY, SECRET), SECRET),
+    ).toBe(true);
+  });
+
+  it("returns false for a tampered body", () => {
+    expect(
+      verifyTwitterSignature(BODY + "x", twitterSign(BODY, SECRET), SECRET),
+    ).toBe(false);
+  });
+
+  it("returns false for a wrong consumer secret", () => {
+    expect(
+      verifyTwitterSignature(BODY, twitterSign(BODY, SECRET), "other-secret"),
+    ).toBe(false);
+  });
+
+  it("returns false when the sha256= prefix is missing", () => {
+    const raw = createHmac("sha256", SECRET).update(BODY).digest("base64");
+    expect(verifyTwitterSignature(BODY, raw, SECRET)).toBe(false);
+  });
+
+  it("returns false when signature or secret is missing", () => {
+    expect(verifyTwitterSignature(BODY, null, SECRET)).toBe(false);
+    expect(verifyTwitterSignature(BODY, undefined, SECRET)).toBe(false);
+    expect(verifyTwitterSignature(BODY, twitterSign(BODY, SECRET), "")).toBe(
+      false,
+    );
   });
 });

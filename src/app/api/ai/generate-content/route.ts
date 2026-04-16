@@ -1,65 +1,9 @@
 import { generateContentSchema } from "@/types/schemas";
 import { createClient } from "@/lib/supabase/server";
-import { logger } from "@/lib/logger";
+import { checkAiRateLimit } from "@/lib/ratelimit";
 import { NextRequest, NextResponse } from "next/server";
 
 const AI_RATE_LIMIT_PER_HOUR = 20;
-
-type RateLimitResult = { ok: boolean; remaining: number; reset: number };
-
-/**
- * Fixed-window rate limiter keyed on userId, hour bucket.
- * Uses Upstash Redis REST API directly so we don't need an extra package.
- * Fails open (and logs) when Upstash isn't configured, so local dev keeps working;
- * production environments must set UPSTASH_REDIS_REST_URL / _TOKEN.
- */
-async function checkAiRateLimit(userId: string): Promise<RateLimitResult> {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-  const now = Math.floor(Date.now() / 1000);
-  const bucket = Math.floor(now / 3600);
-  const reset = (bucket + 1) * 3600;
-
-  if (!url || !token) {
-    logger.warn("Upstash not configured; AI rate limit skipped", { userId });
-    return { ok: true, remaining: -1, reset };
-  }
-
-  const key = `ratelimit:ai:${userId}:${bucket}`;
-
-  try {
-    const res = await fetch(`${url}/pipeline`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify([
-        ["INCR", key],
-        ["EXPIRE", key, "3600", "NX"],
-      ]),
-    });
-    if (!res.ok) {
-      logger.error("Upstash rate limit request failed", undefined, {
-        status: res.status,
-      });
-      return { ok: true, remaining: -1, reset };
-    }
-    const data = (await res.json()) as Array<{
-      result?: number;
-      error?: string;
-    }>;
-    const count = typeof data[0]?.result === "number" ? data[0]!.result! : 0;
-    return {
-      ok: count <= AI_RATE_LIMIT_PER_HOUR,
-      remaining: Math.max(0, AI_RATE_LIMIT_PER_HOUR - count),
-      reset,
-    };
-  } catch (err) {
-    logger.error("Upstash rate limit threw", err, { userId });
-    return { ok: true, remaining: -1, reset };
-  }
-}
 
 /**
  * POST /api/ai/generate-content
@@ -104,7 +48,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Upstash rate limit — 20 requests per user per hour
-    const rl = await checkAiRateLimit(user.id);
+    const rl = await checkAiRateLimit(user.id, AI_RATE_LIMIT_PER_HOUR);
     if (!rl.ok) {
       return NextResponse.json(
         { error: "Rate limit exceeded. Try again later." },

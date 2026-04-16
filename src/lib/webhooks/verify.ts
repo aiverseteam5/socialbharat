@@ -1,6 +1,48 @@
 import { createHmac, timingSafeEqual } from "crypto";
 
 /**
+ * Compute Twitter CRC response token.
+ * Twitter sends a `crc_token` query param on GET; we reply with
+ * `response_token = "sha256=" + base64(HMAC-SHA256(crc_token, consumer_secret))`.
+ */
+export function twitterCrcResponseToken(
+  crcToken: string,
+  consumerSecret: string,
+): string {
+  const hmac = createHmac("sha256", consumerSecret)
+    .update(crcToken)
+    .digest("base64");
+  return `sha256=${hmac}`;
+}
+
+/**
+ * Verify a Twitter Account Activity webhook signature.
+ * Twitter signs the raw body with HMAC-SHA256 using the consumer secret
+ * and sends `sha256=<base64>` in the `X-Twitter-Webhooks-Signature` header.
+ */
+export function verifyTwitterSignature(
+  rawBody: string,
+  signatureHeader: string | null | undefined,
+  consumerSecret: string,
+): boolean {
+  if (!signatureHeader || !consumerSecret) return false;
+  const prefix = "sha256=";
+  if (!signatureHeader.startsWith(prefix)) return false;
+  const received = signatureHeader.slice(prefix.length);
+  const expected = createHmac("sha256", consumerSecret)
+    .update(rawBody)
+    .digest("base64");
+  try {
+    const a = Buffer.from(received, "base64");
+    const b = Buffer.from(expected, "base64");
+    if (a.length !== b.length) return false;
+    return timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Constant-time compare of two hex digest strings.
  * Returns false if lengths differ (before comparing bytes).
  */

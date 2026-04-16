@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import { useInbox } from "@/hooks/useInbox";
 import { ConversationList } from "@/components/inbox/ConversationList";
 import { MessageThread } from "@/components/inbox/MessageThread";
@@ -12,7 +13,9 @@ import { logger } from "@/lib/logger";
 
 const AI_PLANS = new Set(["growth", "business", "enterprise"]);
 
-export default function InboxPage() {
+export default function InboxConversationPage() {
+  const params = useParams<{ conversationId: string }>();
+  const conversationId = params.conversationId;
   const {
     conversations,
     selectedConversationId,
@@ -26,6 +29,12 @@ export default function InboxPage() {
   } = useInbox();
   const [draft, setDraft] = useState("");
   const [aiEnabled, setAiEnabled] = useState(false);
+
+  useEffect(() => {
+    if (conversationId && conversationId !== selectedConversationId) {
+      selectConversation(conversationId);
+    }
+  }, [conversationId, selectedConversationId, selectConversation]);
 
   const selected =
     conversations.find((c) => c.id === selectedConversationId) ?? null;
@@ -115,7 +124,7 @@ export default function InboxPage() {
           </>
         ) : (
           <Card className="m-6 flex flex-1 items-center justify-center text-sm text-muted-foreground">
-            Select a conversation to get started.
+            Loading conversation...
           </Card>
         )}
       </div>
