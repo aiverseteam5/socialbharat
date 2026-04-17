@@ -1,115 +1,133 @@
-import { createClient } from '@/lib/supabase/server'
-import { createOrder } from '@/lib/razorpay'
-import { calculateGST } from '@/lib/gst'
-import { z } from 'zod'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { createClient } from "@/lib/supabase/server";
+import { createOrder } from "@/lib/razorpay";
+import { calculateGST } from "@/lib/gst";
+import { logger } from "@/lib/logger";
 
 /**
  * POST /api/billing/checkout
- * Create Razorpay order for selected plan
- * Requires authentication
+ * Create a Razorpay order for the selected plan.
+ * Requires the caller to be an owner or admin of the org they're billing.
  */
 
 const checkoutSchema = z.object({
-  plan: z.enum(['free', 'starter', 'pro', 'business', 'enterprise']),
-  billingCycle: z.enum(['monthly', 'yearly']),
-  billingState: z.string().optional(),
-  gstNumber: z.string().optional(),
-})
+  plan: z.enum(["free", "starter", "pro", "business", "enterprise"]),
+  billingCycle: z.enum(["monthly", "yearly"]),
+  billingState: z.string().min(1).max(50).optional(),
+  gstNumber: z.string().min(1).max(15).optional(),
+});
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await request.json()
-    const parsed = checkoutSchema.parse(body)
+    const body = await request.json();
+    const parsed = checkoutSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid request body", details: parsed.error.errors },
+        { status: 400 },
+      );
+    }
 
-    // Get user's organization
-    const { data: orgMember } = await supabase
-      .from('org_members')
-      .select('org_id')
-      .eq('user_id', user.id)
+    // Must be owner or admin of exactly one org to initiate a purchase.
+    const { data: membership } = await supabase
+      .from("org_members")
+      .select("org_id, role")
+      .eq("user_id", user.id)
       .limit(1)
-      .single()
+      .single();
 
-    if (!orgMember) {
-      return NextResponse.json({ error: 'No organization found' }, { status: 400 })
+    if (!membership) {
+      return NextResponse.json(
+        { error: "No organization found" },
+        { status: 400 },
+      );
+    }
+    if (!["owner", "admin"].includes(membership.role)) {
+      return NextResponse.json(
+        { error: "Only organization owners or admins can manage billing" },
+        { status: 403 },
+      );
     }
 
-    const orgId = orgMember.org_id
+    const orgId = membership.org_id;
 
-    // Get plan details
     const { data: plan } = await supabase
-      .from('plan_limits')
-      .select('*')
-      .eq('plan', parsed.plan)
-      .single()
+      .from("plan_limits")
+      .select("plan, price_monthly_inr, price_yearly_inr")
+      .eq("plan", parsed.data.plan)
+      .single();
 
     if (!plan) {
-      return NextResponse.json({ error: 'Plan not found' }, { status: 404 })
+      return NextResponse.json({ error: "Plan not found" }, { status: 404 });
     }
 
-    // Determine base amount (in paise)
-    const baseAmount = parsed.billingCycle === 'monthly' 
-      ? plan.price_monthly_inr 
-      : plan.price_yearly_inr
-
-    // Free plan doesn't need payment
-    if (parsed.plan === 'free') {
-      // Update org to free plan directly
-      await supabase
-        .from('organizations')
-        .update({ 
-          plan: 'free',
-          plan_expires_at: null,
-        })
-        .eq('id', orgId)
-
-      return NextResponse.json({ 
+    // Free plan short-circuit — no payment needed.
+    if (parsed.data.plan === "free") {
+      const { error: updErr } = await supabase
+        .from("organizations")
+        .update({ plan: "free", plan_expires_at: null })
+        .eq("id", orgId);
+      if (updErr) {
+        logger.error("Free plan downgrade failed", updErr, { orgId });
+        return NextResponse.json(
+          { error: "Failed to update plan" },
+          { status: 500 },
+        );
+      }
+      return NextResponse.json({
         success: true,
-        plan: 'free',
+        plan: "free",
         requiresPayment: false,
-      })
+      });
     }
 
-    // Calculate GST if billing state provided
-    let gstBreakdown
-    if (parsed.billingState) {
-      const companyState = process.env.COMPANY_GST_STATE || 'Karnataka'
-      gstBreakdown = calculateGST(baseAmount, parsed.billingState, companyState)
-    } else {
-      // Default to intra-state (company state)
-      const companyState = process.env.COMPANY_GST_STATE || 'Karnataka'
-      gstBreakdown = calculateGST(baseAmount, companyState, companyState)
-    }
+    // plan_limits.price_*_inr is PAISE (see migration 00005).
+    const baseAmount =
+      parsed.data.billingCycle === "monthly"
+        ? plan.price_monthly_inr
+        : plan.price_yearly_inr;
 
-    // Update org with billing details
-    await supabase
-      .from('organizations')
+    const companyState = process.env.COMPANY_GST_STATE || "Karnataka";
+    const customerState = parsed.data.billingState || companyState;
+    const gstBreakdown = calculateGST(baseAmount, customerState, companyState);
+
+    const { error: billingUpdErr } = await supabase
+      .from("organizations")
       .update({
-        gst_number: parsed.gstNumber || null,
-        billing_state: parsed.billingState || null,
+        gst_number: parsed.data.gstNumber || null,
+        billing_state: parsed.data.billingState || null,
       })
-      .eq('id', orgId)
+      .eq("id", orgId);
+    if (billingUpdErr) {
+      logger.error("Billing details update failed", billingUpdErr, { orgId });
+      return NextResponse.json(
+        { error: "Failed to save billing details" },
+        { status: 500 },
+      );
+    }
 
-    // Create Razorpay order
     const order = await createOrder({
-      amount: gstBreakdown.totalAmount,
-      currency: 'INR',
+      amount: gstBreakdown.totalAmount, // paise — Razorpay's contract
+      currency: "INR",
       orgId,
-      receipt: `checkout_${parsed.plan}_${parsed.billingCycle}`,
+      receipt: `checkout_${parsed.data.plan}_${parsed.data.billingCycle}`,
       notes: {
-        plan: parsed.plan,
-        billing_cycle: parsed.billingCycle,
-        gst_number: parsed.gstNumber || '',
-        billing_state: parsed.billingState || '',
+        plan: parsed.data.plan,
+        billing_cycle: parsed.data.billingCycle,
+        gst_number: parsed.data.gstNumber || "",
+        billing_state: parsed.data.billingState || "",
+        base_amount: String(baseAmount), // paise; webhook uses this for GST
       },
-    })
+    });
 
     return NextResponse.json({
       orderId: order.id,
@@ -118,14 +136,11 @@ export async function POST(request: NextRequest) {
       key: process.env.RAZORPAY_KEY_ID,
       orgId,
       gstBreakdown,
-      plan: parsed.plan,
-      billingCycle: parsed.billingCycle,
-    })
+      plan: parsed.data.plan,
+      billingCycle: parsed.data.billingCycle,
+    });
   } catch (error) {
-    console.error('Checkout failed:', error)
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Checkout failed' },
-      { status: 500 }
-    )
+    logger.error("Checkout failed", error);
+    return NextResponse.json({ error: "Checkout failed" }, { status: 500 });
   }
 }
