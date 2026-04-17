@@ -9,6 +9,7 @@ export interface MetricCardProps {
   previousValue?: number;
   format?: "number" | "percent";
   suffix?: string;
+  accentColor?: string;
 }
 
 function formatNumber(n: number): string {
@@ -21,9 +22,7 @@ function formatNumber(n: number): string {
 }
 
 function formatValue(value: number, format: "number" | "percent"): string {
-  if (format === "percent") {
-    return `${Number(value ?? 0).toFixed(2)}%`;
-  }
+  if (format === "percent") return `${Number(value ?? 0).toFixed(2)}%`;
   return formatNumber(value);
 }
 
@@ -39,6 +38,7 @@ export function MetricCard({
   previousValue,
   format = "number",
   suffix,
+  accentColor = "bg-brand-500",
 }: MetricCardProps) {
   const change = percentChange(value, previousValue);
   const direction =
@@ -53,30 +53,39 @@ export function MetricCard({
 
   const trendColor =
     direction === "up"
-      ? "text-green-600"
+      ? "text-emerald-600 bg-emerald-50"
       : direction === "down"
-        ? "text-red-600"
-        : "text-muted-foreground";
+        ? "text-red-500 bg-red-50"
+        : "text-slate-400 bg-slate-50";
 
   return (
-    <Card>
-      <CardContent className="p-5 space-y-2">
-        <p className="text-sm text-muted-foreground">{label}</p>
+    <Card className="relative overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-200">
+      {/* Left accent bar */}
+      <span className={cn("absolute left-0 top-0 bottom-0 w-1", accentColor)} />
+      <CardContent className="pl-6 pr-5 py-5 space-y-2">
+        <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+          {label}
+        </p>
         <div className="flex items-baseline gap-2">
-          <span className="text-2xl font-semibold">
+          <span className="text-3xl font-bold text-slate-900 tabular-nums">
             {formatValue(value, format)}
           </span>
-          {suffix && (
-            <span className="text-sm text-muted-foreground">{suffix}</span>
-          )}
+          {suffix && <span className="text-sm text-slate-400">{suffix}</span>}
         </div>
         {change !== null && (
-          <div className={cn("flex items-center gap-1 text-xs", trendColor)}>
-            <TrendIcon className="h-3.5 w-3.5" />
+          <div
+            className={cn(
+              "inline-flex items-center gap-1 text-xs font-medium rounded-full px-2 py-0.5",
+              trendColor,
+            )}
+          >
+            <TrendIcon className="h-3 w-3" />
             <span>
               {change > 0 ? "+" : ""}
               {change.toFixed(1)}%{" "}
-              {t("analytics.vs_previous_period", getLocale())}
+              <span className="font-normal opacity-70">
+                {t("analytics.vs_previous_period", getLocale())}
+              </span>
             </span>
           </div>
         )}

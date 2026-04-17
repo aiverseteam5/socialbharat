@@ -47,6 +47,7 @@ specs/                    — Requirements, solution design, plan, tasks
 - Razorpay webhook handler: verify signature before processing. Use idempotency checks.
 - All user-facing text must support i18n (use translation keys, not hardcoded strings).
 - Phone-first auth pattern: Indian users prefer OTP over email/password.
+- Background jobs, crons, and webhook handlers: ALWAYS use createServiceClient(). Never createClient(). There is no user session in these contexts.
 
 ## India-Specific Requirements
 
