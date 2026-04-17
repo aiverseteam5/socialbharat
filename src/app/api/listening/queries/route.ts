@@ -106,6 +106,17 @@ export async function GET() {
       );
     }
 
+    const allowed = await checkPlanLimit(orgMember.org_id, "social_listening");
+    if (!allowed) {
+      return NextResponse.json(
+        {
+          error: "Social listening is not available on your plan",
+          code: "PLAN_LIMIT_EXCEEDED",
+        },
+        { status: 403 },
+      );
+    }
+
     const { data: queries, error } = await supabase
       .from("listening_queries")
       .select("*")

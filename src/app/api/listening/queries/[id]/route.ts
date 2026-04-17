@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { checkPlanLimit } from "@/lib/plan-limits";
 import { createListeningQuerySchema } from "@/types/schemas";
 import { logger } from "@/lib/logger";
 import { ZodError, z } from "zod";
 
 const idSchema = z.object({ id: z.string().uuid() });
+
+const PLAN_DENIED = NextResponse.json(
+  {
+    error: "Social listening is not available on your plan",
+    code: "PLAN_LIMIT_EXCEEDED",
+  },
+  { status: 403 },
+);
 
 export async function GET(
   _request: NextRequest,
@@ -34,6 +43,9 @@ export async function GET(
         { status: 400 },
       );
     }
+
+    if (!(await checkPlanLimit(orgMember.org_id, "social_listening")))
+      return PLAN_DENIED;
 
     const { data: query, error } = await supabase
       .from("listening_queries")
@@ -96,6 +108,9 @@ export async function PUT(
         { status: 403 },
       );
     }
+
+    if (!(await checkPlanLimit(orgMember.org_id, "social_listening")))
+      return PLAN_DENIED;
 
     const body = await request.json();
     const parsed = createListeningQuerySchema.partial().parse(body);
@@ -169,15 +184,28 @@ export async function DELETE(
       );
     }
 
-    const { error } = await supabase
+    if (!(await checkPlanLimit(orgMember.org_id, "social_listening")))
+      return PLAN_DENIED;
+
+    // Use .select() to confirm a row was actually matched and updated (W-2)
+    const { data: updated, error } = await supabase
       .from("listening_queries")
       .update({ is_active: false })
       .eq("id", queryId)
-      .eq("org_id", orgMember.org_id);
+      .eq("org_id", orgMember.org_id)
+      .select("id");
 
     if (error) {
+      logger.error("DELETE /api/listening/queries/[id] db error", error);
       return NextResponse.json(
-        { error: "Query not found or deactivation failed" },
+        { error: "Deactivation failed" },
+        { status: 500 },
+      );
+    }
+
+    if (!updated || updated.length === 0) {
+      return NextResponse.json(
+        { error: "Query not found", code: "NOT_FOUND" },
         { status: 404 },
       );
     }

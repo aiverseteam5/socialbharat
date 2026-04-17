@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("@/lib/supabase/server", () => ({
-  createClient: vi.fn(),
+vi.mock("@/lib/supabase/service", () => ({
+  createServiceClient: vi.fn(),
 }));
 
 vi.mock("@/lib/logger", () => ({
@@ -113,8 +113,8 @@ describe("checkQueryAlerts", () => {
   });
 
   it("does not trigger alert when there are no recent mentions", async () => {
-    const { createClient } = await import("@/lib/supabase/server");
-    vi.mocked(createClient).mockResolvedValue(
+    const { createServiceClient } = await import("@/lib/supabase/service");
+    vi.mocked(createServiceClient).mockReturnValue(
       buildMock({ recentMentions: [], previousMentions: [] }) as never,
     );
 
@@ -124,7 +124,7 @@ describe("checkQueryAlerts", () => {
   });
 
   it("does not trigger alert when negative ratio is below threshold (20%)", async () => {
-    const { createClient } = await import("@/lib/supabase/server");
+    const { createServiceClient } = await import("@/lib/supabase/service");
     // 1/5 = 20% negative, below 50% threshold
     // 5 recent vs 2 prev/23h ≈ 0.09 hourly avg → 5 is above 3x but we check sentiment first
     const recentMentions = [
@@ -135,7 +135,7 @@ describe("checkQueryAlerts", () => {
       { sentiment_label: "positive" },
     ];
     const previousMentions = [{ id: "a" }, { id: "b" }];
-    vi.mocked(createClient).mockResolvedValue(
+    vi.mocked(createServiceClient).mockReturnValue(
       buildMock({ recentMentions, previousMentions }) as never,
     );
 
@@ -146,7 +146,7 @@ describe("checkQueryAlerts", () => {
   });
 
   it("triggers alert when negative sentiment exceeds 50% threshold", async () => {
-    const { createClient } = await import("@/lib/supabase/server");
+    const { createServiceClient } = await import("@/lib/supabase/service");
     // 3/6 = 50% negative → exactly at threshold, triggers
     const recentMentions = [
       { sentiment_label: "negative" },
@@ -158,7 +158,7 @@ describe("checkQueryAlerts", () => {
     ];
     // Very low previous volume → no volume spike
     const previousMentions = [{ id: "a" }, { id: "b" }];
-    vi.mocked(createClient).mockResolvedValue(
+    vi.mocked(createServiceClient).mockReturnValue(
       buildMock({ recentMentions, previousMentions }) as never,
     );
 
@@ -171,7 +171,7 @@ describe("checkQueryAlerts", () => {
   });
 
   it("triggers alert when volume is 3x+ the hourly baseline", async () => {
-    const { createClient } = await import("@/lib/supabase/server");
+    const { createServiceClient } = await import("@/lib/supabase/service");
     // 4 recent (only 25% negative — below sentiment threshold)
     // 23 previous over 23h → baseline 1/hr → 3x = 3 → 4 > 3 → volume spike
     const recentMentions = [
@@ -183,7 +183,7 @@ describe("checkQueryAlerts", () => {
     const previousMentions = Array.from({ length: 23 }, (_, i) => ({
       id: String(i),
     }));
-    vi.mocked(createClient).mockResolvedValue(
+    vi.mocked(createServiceClient).mockReturnValue(
       buildMock({ recentMentions, previousMentions }) as never,
     );
 
@@ -194,7 +194,7 @@ describe("checkQueryAlerts", () => {
   });
 
   it("creates a crisis_alert notification when alert triggers", async () => {
-    const { createClient } = await import("@/lib/supabase/server");
+    const { createServiceClient } = await import("@/lib/supabase/service");
     const mock = buildMock({
       recentMentions: [
         { sentiment_label: "negative" },
@@ -204,7 +204,7 @@ describe("checkQueryAlerts", () => {
       ],
       previousMentions: [{ id: "a" }],
     });
-    vi.mocked(createClient).mockResolvedValue(mock as never);
+    vi.mocked(createServiceClient).mockReturnValue(mock as never);
 
     const { checkQueryAlerts } = await import("@/lib/listening/alerts");
     const result = await checkQueryAlerts("query-1", "Crisis Query", "org-1");

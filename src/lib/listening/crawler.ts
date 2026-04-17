@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { logger } from "@/lib/logger";
 import type {
   ListeningQuery,
@@ -30,9 +30,7 @@ const SENTIMENT_SYSTEM = `You are a sentiment analysis expert specializing in In
 Analyze the sentiment of the provided text. It may be in English, Hindi, Hinglish, Tamil, Telugu, Bengali, Marathi, or other Indian languages.
 Return ONLY valid JSON: {"score": <-1.0 to 1.0>, "label": "<positive|negative|neutral|mixed>", "language_detected": "<BCP-47 code>"}`;
 
-async function analyzeSentiment(
-  text: string,
-): Promise<{
+async function analyzeSentiment(text: string): Promise<{
   score: number;
   label: SentimentLabel;
   language_detected: string;
@@ -226,7 +224,7 @@ async function fetchInstagramMentions(
 export async function crawlMentionsForQuery(
   queryId: string,
 ): Promise<{ saved: number; errors: string[] }> {
-  const supabase = await createClient();
+  const supabase = createServiceClient();
   const errors: string[] = [];
 
   const { data: query, error: qErr } = await supabase
@@ -264,7 +262,10 @@ export async function crawlMentionsForQuery(
     );
 
   const existingSet = new Set(
-    (existing ?? []).map((e) => `${e.platform}:${e.platform_post_id}`),
+    (existing ?? []).map(
+      (e: { platform: string; platform_post_id: string }) =>
+        `${e.platform}:${e.platform_post_id}`,
+    ),
   );
   const newMentions = allMentions.filter(
     (m) => !existingSet.has(`${m.platform}:${m.platform_post_id}`),
@@ -312,7 +313,7 @@ export async function crawlMentionsForQuery(
 }
 
 export async function crawlAllActiveQueries(): Promise<CrawlResult> {
-  const supabase = await createClient();
+  const supabase = createServiceClient();
 
   const { data: queries, error } = await supabase
     .from("listening_queries")

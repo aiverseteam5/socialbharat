@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { logger } from "@/lib/logger";
 
 const NEGATIVE_RATIO_THRESHOLD = 0.5; // >50% negative in last hour
@@ -13,7 +13,7 @@ export interface AlertCheckResult {
 }
 
 export async function checkAlertThresholds(): Promise<AlertCheckResult[]> {
-  const supabase = await createClient();
+  const supabase = createServiceClient();
 
   const { data: queries, error } = await supabase
     .from("listening_queries")
@@ -37,7 +37,7 @@ export async function checkQueryAlerts(
   queryName: string,
   orgId: string,
 ): Promise<AlertCheckResult> {
-  const supabase = await createClient();
+  const supabase = createServiceClient();
 
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -66,7 +66,7 @@ export async function checkQueryAlerts(
   }
 
   const negativeCount = (recentMentions ?? []).filter(
-    (m) => m.sentiment_label === "negative",
+    (m: { sentiment_label: string | null }) => m.sentiment_label === "negative",
   ).length;
   const negativeRatio = negativeCount / recentTotal;
 

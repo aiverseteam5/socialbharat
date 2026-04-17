@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { checkPlanLimit } from "@/lib/plan-limits";
 import { logger } from "@/lib/logger";
 import { z, ZodError } from "zod";
 
@@ -46,6 +47,16 @@ export async function GET(
       return NextResponse.json(
         { error: "No organization found" },
         { status: 400 },
+      );
+    }
+
+    if (!(await checkPlanLimit(orgMember.org_id, "social_listening"))) {
+      return NextResponse.json(
+        {
+          error: "Social listening is not available on your plan",
+          code: "PLAN_LIMIT_EXCEEDED",
+        },
+        { status: 403 },
       );
     }
 
