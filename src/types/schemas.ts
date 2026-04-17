@@ -213,6 +213,49 @@ export const createReportSchema = z.object({
     .optional(),
 });
 
+export const ANALYTICS_METRIC_KEYS = [
+  "followers_count",
+  "impressions",
+  "reach",
+  "engagements",
+  "engagement_rate",
+  "clicks",
+  "shares",
+  "comments",
+  "likes",
+] as const;
+
+export type AnalyticsMetricKey = (typeof ANALYTICS_METRIC_KEYS)[number];
+
+export const saveReportSchema = z.object({
+  name: z.string().min(1).max(255),
+  profile_ids: z.array(z.string().uuid()).min(1),
+  metrics: z.array(z.enum(ANALYTICS_METRIC_KEYS)).min(1),
+  start_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Date format must be YYYY-MM-DD"),
+  end_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Date format must be YYYY-MM-DD"),
+});
+
+export const analyticsQuerySchema = z.object({
+  start_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  end_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  profile_id: z.string().uuid().optional(),
+});
+
+export const analyticsPostsQuerySchema = analyticsQuerySchema.extend({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
 // ============================================
 // AI SCHEMAS
 // ============================================
