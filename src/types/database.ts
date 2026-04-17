@@ -1,37 +1,42 @@
 // src/types/database.ts
 // Auto-generated types matching Supabase schema — keep in sync with migrations
 
-export type UserRole = 'owner' | 'admin' | 'editor' | 'viewer';
+export type UserRole = "owner" | "admin" | "editor" | "viewer";
 
 export type SocialPlatform =
-  | 'facebook'
-  | 'instagram'
-  | 'twitter'
-  | 'linkedin'
-  | 'youtube'
-  | 'whatsapp'
-  | 'sharechat'
-  | 'moj'
-  | 'google_business';
+  | "facebook"
+  | "instagram"
+  | "twitter"
+  | "linkedin"
+  | "youtube"
+  | "whatsapp"
+  | "sharechat"
+  | "moj"
+  | "google_business";
 
 export type PostStatus =
-  | 'draft'
-  | 'pending_approval'
-  | 'approved'
-  | 'scheduled'
-  | 'publishing'
-  | 'published'
-  | 'failed'
-  | 'partially_failed';
+  | "draft"
+  | "pending_approval"
+  | "approved"
+  | "scheduled"
+  | "publishing"
+  | "published"
+  | "failed"
+  | "partially_failed";
 
-export type ConversationStatus = 'open' | 'assigned' | 'closed' | 'snoozed';
-export type ConversationType = 'message' | 'comment' | 'mention' | 'review';
-export type MessageSenderType = 'contact' | 'agent' | 'system';
-export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
-export type SentimentLabel = 'positive' | 'negative' | 'neutral' | 'mixed';
-export type InvoiceStatus = 'pending' | 'paid' | 'failed' | 'refunded';
-export type PlanType = 'free' | 'starter' | 'pro' | 'business' | 'enterprise';
-export type FestivalType = 'national' | 'regional' | 'religious' | 'commercial' | 'sporting';
+export type ConversationStatus = "open" | "assigned" | "closed" | "snoozed";
+export type ConversationType = "message" | "comment" | "mention" | "review";
+export type MessageSenderType = "contact" | "agent" | "system";
+export type ApprovalStatus = "pending" | "approved" | "rejected";
+export type SentimentLabel = "positive" | "negative" | "neutral" | "mixed";
+export type InvoiceStatus = "pending" | "paid" | "failed" | "refunded";
+export type PlanType = "free" | "starter" | "pro" | "business" | "enterprise";
+export type FestivalType =
+  | "national"
+  | "regional"
+  | "religious"
+  | "commercial"
+  | "sporting";
 
 export interface Organization {
   id: string;
@@ -89,7 +94,7 @@ export interface Invitation {
   org_id: string;
   email: string | null;
   phone: string | null;
-  role: Exclude<UserRole, 'owner'>;
+  role: Exclude<UserRole, "owner">;
   token: string;
   invited_by: string;
   expires_at: string;
@@ -139,11 +144,14 @@ export interface Post {
 export interface PostContentJson {
   text: string;
   media_urls?: string[];
-  platform_overrides?: Record<SocialPlatform, { text?: string; media_urls?: string[] }>;
+  platform_overrides?: Record<
+    SocialPlatform,
+    { text?: string; media_urls?: string[] }
+  >;
 }
 
 export interface PublishResult {
-  status: 'success' | 'failed';
+  status: "success" | "failed";
   platform_post_id?: string;
   error?: string;
 }
@@ -248,6 +256,20 @@ export interface PostMetrics {
   video_views: number;
   fetched_at: string;
   metadata: Record<string, unknown>;
+}
+
+export interface AnalyticsReport {
+  id: string;
+  org_id: string;
+  created_by: string | null;
+  name: string;
+  profile_ids: string[];
+  metrics: string[];
+  start_date: string;
+  end_date: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface MediaAsset {
@@ -382,27 +404,151 @@ export interface WebhookEvent {
 export interface Database {
   public: {
     Tables: {
-      organizations: { Row: Organization; Insert: Partial<Organization> & Pick<Organization, 'name' | 'slug'>; Update: Partial<Organization> };
-      users: { Row: User; Insert: Partial<User> & Pick<User, 'id'>; Update: Partial<User> };
-      org_members: { Row: OrgMember; Insert: Partial<OrgMember> & Pick<OrgMember, 'org_id' | 'user_id' | 'role'>; Update: Partial<OrgMember> };
-      invitations: { Row: Invitation; Insert: Partial<Invitation> & Pick<Invitation, 'org_id' | 'role' | 'token' | 'invited_by' | 'expires_at'>; Update: Partial<Invitation> };
-      social_profiles: { Row: SocialProfile; Insert: Partial<SocialProfile> & Pick<SocialProfile, 'org_id' | 'platform'>; Update: Partial<SocialProfile> };
-      posts: { Row: Post; Insert: Partial<Post> & Pick<Post, 'org_id' | 'created_by' | 'content' | 'platforms'>; Update: Partial<Post> };
-      post_approvals: { Row: PostApproval; Insert: Partial<PostApproval> & Pick<PostApproval, 'post_id'>; Update: Partial<PostApproval> };
-      campaigns: { Row: Campaign; Insert: Partial<Campaign> & Pick<Campaign, 'org_id' | 'name' | 'created_by'>; Update: Partial<Campaign> };
-      contacts: { Row: Contact; Insert: Partial<Contact> & Pick<Contact, 'org_id' | 'platform' | 'platform_user_id'>; Update: Partial<Contact> };
-      conversations: { Row: Conversation; Insert: Partial<Conversation> & Pick<Conversation, 'org_id' | 'social_profile_id' | 'contact_id' | 'platform'>; Update: Partial<Conversation> };
-      messages: { Row: Message; Insert: Partial<Message> & Pick<Message, 'conversation_id' | 'sender_type' | 'sender_id'>; Update: Partial<Message> };
-      profile_metrics: { Row: ProfileMetrics; Insert: Partial<ProfileMetrics> & Pick<ProfileMetrics, 'social_profile_id' | 'metric_date'>; Update: Partial<ProfileMetrics> };
-      post_metrics: { Row: PostMetrics; Insert: Partial<PostMetrics> & Pick<PostMetrics, 'post_id' | 'social_profile_id'>; Update: Partial<PostMetrics> };
-      media_assets: { Row: MediaAsset; Insert: Partial<MediaAsset> & Pick<MediaAsset, 'org_id' | 'uploaded_by' | 'file_name' | 'file_type' | 'file_size' | 'storage_path'>; Update: Partial<MediaAsset> };
-      plan_limits: { Row: PlanLimits; Insert: PlanLimits; Update: Partial<PlanLimits> };
-      invoices: { Row: Invoice; Insert: Partial<Invoice> & Pick<Invoice, 'org_id' | 'invoice_number' | 'base_amount' | 'total_amount'>; Update: Partial<Invoice> };
-      listening_queries: { Row: ListeningQuery; Insert: Partial<ListeningQuery> & Pick<ListeningQuery, 'org_id' | 'name' | 'keywords' | 'created_by'>; Update: Partial<ListeningQuery> };
-      listening_mentions: { Row: ListeningMention; Insert: Partial<ListeningMention> & Pick<ListeningMention, 'query_id' | 'platform'>; Update: Partial<ListeningMention> };
-      notifications: { Row: Notification; Insert: Partial<Notification> & Pick<Notification, 'user_id' | 'type' | 'title'>; Update: Partial<Notification> };
-      indian_festivals: { Row: IndianFestival; Insert: Partial<IndianFestival> & Pick<IndianFestival, 'name' | 'festival_date' | 'year'>; Update: Partial<IndianFestival> };
-      webhook_events: { Row: WebhookEvent; Insert: Partial<WebhookEvent> & Pick<WebhookEvent, 'provider' | 'event_id' | 'event_type'>; Update: Partial<WebhookEvent> };
+      organizations: {
+        Row: Organization;
+        Insert: Partial<Organization> & Pick<Organization, "name" | "slug">;
+        Update: Partial<Organization>;
+      };
+      users: {
+        Row: User;
+        Insert: Partial<User> & Pick<User, "id">;
+        Update: Partial<User>;
+      };
+      org_members: {
+        Row: OrgMember;
+        Insert: Partial<OrgMember> &
+          Pick<OrgMember, "org_id" | "user_id" | "role">;
+        Update: Partial<OrgMember>;
+      };
+      invitations: {
+        Row: Invitation;
+        Insert: Partial<Invitation> &
+          Pick<
+            Invitation,
+            "org_id" | "role" | "token" | "invited_by" | "expires_at"
+          >;
+        Update: Partial<Invitation>;
+      };
+      social_profiles: {
+        Row: SocialProfile;
+        Insert: Partial<SocialProfile> &
+          Pick<SocialProfile, "org_id" | "platform">;
+        Update: Partial<SocialProfile>;
+      };
+      posts: {
+        Row: Post;
+        Insert: Partial<Post> &
+          Pick<Post, "org_id" | "created_by" | "content" | "platforms">;
+        Update: Partial<Post>;
+      };
+      post_approvals: {
+        Row: PostApproval;
+        Insert: Partial<PostApproval> & Pick<PostApproval, "post_id">;
+        Update: Partial<PostApproval>;
+      };
+      campaigns: {
+        Row: Campaign;
+        Insert: Partial<Campaign> &
+          Pick<Campaign, "org_id" | "name" | "created_by">;
+        Update: Partial<Campaign>;
+      };
+      contacts: {
+        Row: Contact;
+        Insert: Partial<Contact> &
+          Pick<Contact, "org_id" | "platform" | "platform_user_id">;
+        Update: Partial<Contact>;
+      };
+      conversations: {
+        Row: Conversation;
+        Insert: Partial<Conversation> &
+          Pick<
+            Conversation,
+            "org_id" | "social_profile_id" | "contact_id" | "platform"
+          >;
+        Update: Partial<Conversation>;
+      };
+      messages: {
+        Row: Message;
+        Insert: Partial<Message> &
+          Pick<Message, "conversation_id" | "sender_type" | "sender_id">;
+        Update: Partial<Message>;
+      };
+      profile_metrics: {
+        Row: ProfileMetrics;
+        Insert: Partial<ProfileMetrics> &
+          Pick<ProfileMetrics, "social_profile_id" | "metric_date">;
+        Update: Partial<ProfileMetrics>;
+      };
+      post_metrics: {
+        Row: PostMetrics;
+        Insert: Partial<PostMetrics> &
+          Pick<PostMetrics, "post_id" | "social_profile_id">;
+        Update: Partial<PostMetrics>;
+      };
+      analytics_reports: {
+        Row: AnalyticsReport;
+        Insert: Partial<AnalyticsReport> &
+          Pick<AnalyticsReport, "org_id" | "name" | "start_date" | "end_date">;
+        Update: Partial<AnalyticsReport>;
+      };
+      media_assets: {
+        Row: MediaAsset;
+        Insert: Partial<MediaAsset> &
+          Pick<
+            MediaAsset,
+            | "org_id"
+            | "uploaded_by"
+            | "file_name"
+            | "file_type"
+            | "file_size"
+            | "storage_path"
+          >;
+        Update: Partial<MediaAsset>;
+      };
+      plan_limits: {
+        Row: PlanLimits;
+        Insert: PlanLimits;
+        Update: Partial<PlanLimits>;
+      };
+      invoices: {
+        Row: Invoice;
+        Insert: Partial<Invoice> &
+          Pick<
+            Invoice,
+            "org_id" | "invoice_number" | "base_amount" | "total_amount"
+          >;
+        Update: Partial<Invoice>;
+      };
+      listening_queries: {
+        Row: ListeningQuery;
+        Insert: Partial<ListeningQuery> &
+          Pick<ListeningQuery, "org_id" | "name" | "keywords" | "created_by">;
+        Update: Partial<ListeningQuery>;
+      };
+      listening_mentions: {
+        Row: ListeningMention;
+        Insert: Partial<ListeningMention> &
+          Pick<ListeningMention, "query_id" | "platform">;
+        Update: Partial<ListeningMention>;
+      };
+      notifications: {
+        Row: Notification;
+        Insert: Partial<Notification> &
+          Pick<Notification, "user_id" | "type" | "title">;
+        Update: Partial<Notification>;
+      };
+      indian_festivals: {
+        Row: IndianFestival;
+        Insert: Partial<IndianFestival> &
+          Pick<IndianFestival, "name" | "festival_date" | "year">;
+        Update: Partial<IndianFestival>;
+      };
+      webhook_events: {
+        Row: WebhookEvent;
+        Insert: Partial<WebhookEvent> &
+          Pick<WebhookEvent, "provider" | "event_id" | "event_type">;
+        Update: Partial<WebhookEvent>;
+      };
     };
   };
 }
