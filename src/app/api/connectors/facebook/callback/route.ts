@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { encrypt } from "@/lib/encryption";
 import { verifyState } from "@/lib/oauth-state";
+import { checkNumericLimit } from "@/lib/plan-limits";
 import { redirect } from "next/navigation";
 import { NextRequest } from "next/server";
 
@@ -97,6 +98,15 @@ export async function GET(request: NextRequest) {
     const encryptedToken = encrypt(accessToken);
 
     for (const page of pages) {
+      const profileLimit = await checkNumericLimit(
+        orgId,
+        "max_social_profiles",
+      );
+      if (!profileLimit.allowed) {
+        redirect(
+          "/dashboard/settings/social-accounts?error=plan_limit_reached",
+        );
+      }
       await supabase.from("social_profiles").upsert({
         org_id: orgId,
         platform: "facebook",

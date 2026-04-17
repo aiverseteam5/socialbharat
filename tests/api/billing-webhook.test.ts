@@ -1,98 +1,159 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { verifyWebhookSignature } from '@/lib/razorpay'
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { createHmac } from "crypto";
 
-// Mock dependencies
-vi.mock('@/lib/razorpay', () => ({
-  verifyWebhookSignature: vi.fn(),
-}))
+vi.mock("@/lib/supabase/service", () => ({
+  createServiceClient: vi.fn(),
+}));
 
-describe('Billing Webhook (Razorpay)', () => {
+vi.mock("@/lib/razorpay", () => ({
+  verifyWebhookSignature: (secret: string, body: string, sig: string) => {
+    const hmac = createHmac("sha256", secret).update(body).digest("hex");
+    return hmac === sig;
+  },
+  createOrder: vi.fn(),
+  cancelSubscription: vi.fn(),
+}));
+
+vi.mock("@/lib/invoice", () => ({
+  generateInvoice: vi.fn(),
+}));
+
+vi.mock("@/lib/logger", () => ({
+  logger: {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
+function sign(body: string, secret: string): string {
+  return createHmac("sha256", secret).update(body).digest("hex");
+}
+
+function buildRequest(body: string, signature: string): Request {
+  return new Request("http://localhost/api/billing/webhook/razorpay", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-razorpay-signature": signature,
+    },
+    body,
+  });
+}
+
+describe("POST /api/billing/webhook/razorpay", () => {
+  const originalSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+
   beforeEach(() => {
-    vi.clearAllMocks()
-  })
+    vi.clearAllMocks();
+    process.env.RAZORPAY_WEBHOOK_SECRET = "test_webhook_secret";
+  });
 
-  describe('Signature Verification', () => {
-    it('should verify webhook signature correctly', () => {
-      vi.mocked(verifyWebhookSignature).mockReturnValue(true)
-      const result = verifyWebhookSignature('secret', 'payload', 'signature')
-      expect(result).toBe(true)
-    })
+  afterEach(() => {
+    process.env.RAZORPAY_WEBHOOK_SECRET = originalSecret;
+  });
 
-    it('should reject invalid webhook signature', () => {
-      vi.mocked(verifyWebhookSignature).mockReturnValue(false)
-      const result = verifyWebhookSignature('secret', 'payload', 'signature')
-      expect(result).toBe(false)
-    })
-  })
+  it("returns 400 when signature header is missing", async () => {
+    const { POST } = await import("@/app/api/billing/webhook/razorpay/route");
+    const req = new Request("http://localhost/api/billing/webhook/razorpay", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ event: "payment.captured" }),
+    });
+    const res = await POST(req as never);
+    expect(res.status).toBe(400);
+  });
 
-  describe('Idempotency Logic', () => {
-    it('should check idempotency by event ID', () => {
-      const processedEvents = new Set(['event-1', 'event-2'])
-      const eventId = 'event-1'
-      const isProcessed = processedEvents.has(eventId)
-      expect(isProcessed).toBe(true)
-    })
+  it("returns 400 when signature is invalid", async () => {
+    const { POST } = await import("@/app/api/billing/webhook/razorpay/route");
+    const body = JSON.stringify({ event: "payment.captured" });
+    const res = await POST(buildRequest(body, "deadbeef") as never);
+    expect(res.status).toBe(400);
+  });
 
-    it('should allow processing of new events', () => {
-      const processedEvents = new Set(['event-1', 'event-2'])
-      const eventId = 'event-3'
-      const isProcessed = processedEvents.has(eventId)
-      expect(isProcessed).toBe(false)
-    })
-  })
+  it("returns 200 with duplicate=true when event_id already recorded", async () => {
+    const { createServiceClient } = await import("@/lib/supabase/service");
+    const maybeSingle = vi
+      .fn()
+      .mockResolvedValue({ data: { id: "row-1" }, error: null });
+    const eq2 = vi.fn(() => ({ maybeSingle }));
+    const eq1 = vi.fn(() => ({ eq: eq2 }));
+    const select = vi.fn(() => ({ eq: eq1 }));
+    const from = vi.fn(() => ({ select }));
+    vi.mocked(createServiceClient).mockReturnValue({
+      from,
+    } as unknown as ReturnType<typeof createServiceClient>);
 
-  describe('Event Types', () => {
-    it('should handle payment.captured event', () => {
-      const event = {
-        event: 'payment.captured',
-        payload: {
-          payment: {
-            entity: {
-              id: 'pay_123',
-              amount: 100000,
-              notes: {
-                org_id: 'org-123',
-                plan: 'pro',
-              },
+    const { POST } = await import("@/app/api/billing/webhook/razorpay/route");
+    const payload = {
+      event: "payment.captured",
+      payload: {
+        payment: {
+          entity: {
+            id: "pay_dup",
+            amount: 100000,
+            currency: "INR",
+            notes: { org_id: "org-1", plan: "pro" },
+          },
+        },
+      },
+    };
+    const body = JSON.stringify(payload);
+    const sig = sign(body, "test_webhook_secret");
+    const res = await POST(buildRequest(body, sig) as never);
+    expect(res.status).toBe(200);
+    const json = (await res.json()) as { duplicate?: boolean };
+    expect(json.duplicate).toBe(true);
+  });
+
+  it("returns 500 when handler throws (event_id not inserted)", async () => {
+    const { createServiceClient } = await import("@/lib/supabase/service");
+    const maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
+    const eq2 = vi.fn(() => ({ maybeSingle }));
+    const eq1 = vi.fn(() => ({ eq: eq2 }));
+    const select = vi.fn(() => ({ eq: eq1 }));
+
+    // organizations.update().eq() — simulate DB error
+    const orgUpdateEq = vi
+      .fn()
+      .mockResolvedValue({ error: { message: "boom" } });
+    const update = vi.fn(() => ({ eq: orgUpdateEq }));
+    const insert = vi.fn();
+
+    const from = vi.fn((table: string) => {
+      if (table === "webhook_events") {
+        return { select, insert };
+      }
+      return { update };
+    });
+    vi.mocked(createServiceClient).mockReturnValue({
+      from,
+    } as unknown as ReturnType<typeof createServiceClient>);
+
+    const { POST } = await import("@/app/api/billing/webhook/razorpay/route");
+    const payload = {
+      event: "payment.captured",
+      payload: {
+        payment: {
+          entity: {
+            id: "pay_err",
+            amount: 100000,
+            currency: "INR",
+            notes: {
+              org_id: "org-1",
+              plan: "pro",
+              billing_cycle: "monthly",
+              base_amount: "100000",
             },
           },
         },
-      }
-      expect(event.event).toBe('payment.captured')
-      expect(event.payload.payment.entity.id).toBe('pay_123')
-    })
-
-    it('should handle subscription.cancelled event', () => {
-      const event = {
-        event: 'subscription.cancelled',
-        payload: {
-          subscription: {
-            entity: {
-              id: 'sub_123',
-              current_end: 1234567890,
-              notes: {
-                org_id: 'org-123',
-              },
-            },
-          },
-        },
-      }
-      expect(event.event).toBe('subscription.cancelled')
-    })
-
-    it('should handle payment.failed event', () => {
-      const event = {
-        event: 'payment.failed',
-        payload: {
-          payment: {
-            entity: {
-              id: 'pay_123',
-              amount: 100000,
-            },
-          },
-        },
-      }
-      expect(event.event).toBe('payment.failed')
-    })
-  })
-})
+      },
+    };
+    const body = JSON.stringify(payload);
+    const sig = sign(body, "test_webhook_secret");
+    const res = await POST(buildRequest(body, sig) as never);
+    expect(res.status).toBe(500);
+    expect(insert).not.toHaveBeenCalled();
+  });
+});

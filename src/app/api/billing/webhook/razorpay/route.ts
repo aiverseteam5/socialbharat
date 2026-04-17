@@ -1,238 +1,324 @@
-import { createClient } from '@/lib/supabase/server'
-import { verifyWebhookSignature } from '@/lib/razorpay'
-import { generateInvoice } from '@/lib/invoice'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from "next/server";
+import { createServiceClient } from "@/lib/supabase/service";
+import { verifyWebhookSignature } from "@/lib/razorpay";
+import { generateInvoice } from "@/lib/invoice";
+import { calculateGST } from "@/lib/gst";
+import { logger } from "@/lib/logger";
+
+export const runtime = "nodejs";
 
 /**
  * POST /api/billing/webhook/razorpay
- * Handle Razorpay webhook events
- * CRITICAL: Verify signature and check idempotency before processing
+ *
+ * Processes Razorpay webhook events. Contract:
+ *   - 200 on success or duplicate (already processed)
+ *   - 400 on missing/invalid signature (don't leak details, don't retry)
+ *   - 500 on processing error (Razorpay will retry)
+ *
+ * Uses the service-role Supabase client because Razorpay's server has no
+ * user session — anon-key + RLS would silently drop every write.
+ *
+ * Idempotency: check first, process, then insert the event_id. On
+ * failure we intentionally skip the insert so a retry can reprocess.
  */
+
+type Supabase = ReturnType<typeof createServiceClient>;
+
+interface RazorpayPayment {
+  id: string;
+  amount: number;
+  currency: string;
+  customer_id?: string;
+  notes?: Record<string, string>;
+}
+
+interface RazorpaySubscription {
+  id: string;
+  current_end: number;
+  notes?: Record<string, string>;
+}
+
+interface RazorpayEvent {
+  event: string;
+  payload: {
+    payment?: { entity: RazorpayPayment };
+    subscription?: { entity: RazorpaySubscription };
+  };
+}
+
 export async function POST(request: NextRequest) {
+  const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+  if (!webhookSecret) {
+    logger.error("RAZORPAY_WEBHOOK_SECRET not configured");
+    return NextResponse.json(
+      { error: "Webhook secret not configured" },
+      { status: 500 },
+    );
+  }
+
+  const signature = request.headers.get("x-razorpay-signature");
+  if (!signature) {
+    return NextResponse.json({ error: "Missing signature" }, { status: 400 });
+  }
+
+  const body = await request.text();
+  if (!verifyWebhookSignature(webhookSecret, body, signature)) {
+    logger.warn("Invalid Razorpay webhook signature");
+    return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+  }
+
+  let event: RazorpayEvent;
   try {
-    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET
-    if (!webhookSecret) {
-      console.error('RAZORPAY_WEBHOOK_SECRET not configured')
-      return NextResponse.json({ error: 'Webhook secret not configured' }, { status: 500 })
-    }
+    event = JSON.parse(body) as RazorpayEvent;
+  } catch (err) {
+    logger.error("Razorpay webhook body is not valid JSON", err);
+    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+  }
 
-    // Get signature from header
-    const signature = request.headers.get('x-razorpay-signature')
-    if (!signature) {
-      console.error('Missing Razorpay signature')
-      return NextResponse.json({ error: 'Missing signature' }, { status: 400 })
-    }
+  const eventId = extractEventId(event);
+  if (!eventId) {
+    logger.error(
+      "Could not extract event id from Razorpay webhook",
+      undefined,
+      {
+        eventType: event.event,
+      },
+    );
+    return NextResponse.json(
+      { error: "Missing event entity id" },
+      { status: 400 },
+    );
+  }
 
-    // Get raw body for signature verification
-    const body = await request.text()
+  const supabase = createServiceClient();
 
-    // Verify webhook signature
-    const isValid = verifyWebhookSignature(webhookSecret, body, signature)
-    if (!isValid) {
-      console.error('Invalid Razorpay webhook signature')
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
-    }
+  // Idempotency check — if we've seen this event id, skip.
+  const { data: existing, error: existingErr } = await supabase
+    .from("webhook_events")
+    .select("id")
+    .eq("provider", "razorpay")
+    .eq("event_id", eventId)
+    .maybeSingle();
 
-    const event = JSON.parse(body)
-    const eventId = event.payload?.payment?.entity?.id || event.id
-    const eventType = event.event
+  if (existingErr) {
+    logger.error("Failed to query webhook_events", existingErr, { eventId });
+    return NextResponse.json({ error: "Storage error" }, { status: 500 });
+  }
+  if (existing) {
+    return NextResponse.json({ success: true, duplicate: true });
+  }
 
-    // Check idempotency - if event already processed, skip
-    const supabase = await createClient()
-    
-    const { data: existingEvent } = await supabase
-      .from('webhook_events')
-      .select('id')
-      .eq('provider', 'razorpay')
-      .eq('event_id', eventId)
-      .single()
+  // Process first; only record the event_id on success so retries work.
+  try {
+    await dispatchEvent(event, supabase);
+  } catch (err) {
+    logger.error("Razorpay webhook handler failed", err, {
+      eventId,
+      eventType: event.event,
+    });
+    return NextResponse.json({ error: "Processing failed" }, { status: 500 });
+  }
 
-    if (existingEvent) {
-      console.log(`Event ${eventId} already processed, skipping`)
-      return NextResponse.json({ success: true, message: 'Event already processed' })
-    }
+  const { error: insertErr } = await supabase.from("webhook_events").insert({
+    provider: "razorpay",
+    event_id: eventId,
+    event_type: event.event,
+    payload: event,
+  });
+  if (insertErr) {
+    logger.error("Failed to record processed webhook event", insertErr, {
+      eventId,
+    });
+    // The work succeeded; allow Razorpay to retry so the record lands.
+    return NextResponse.json({ error: "Storage error" }, { status: 500 });
+  }
 
-    // Insert webhook event record for idempotency
-    await supabase
-      .from('webhook_events')
-      .insert({
-        provider: 'razorpay',
-        event_id: eventId,
-        event_type: eventType,
-        payload: event,
-      })
+  return NextResponse.json({ success: true });
+}
 
-    // Handle different event types
-    switch (eventType) {
-      case 'payment.captured':
-        await handlePaymentCaptured(event, supabase)
-        break
+function extractEventId(event: RazorpayEvent): string | null {
+  if (event.payload.payment?.entity?.id) {
+    return event.payload.payment.entity.id;
+  }
+  if (event.payload.subscription?.entity?.id) {
+    return event.payload.subscription.entity.id;
+  }
+  return null;
+}
 
-      case 'subscription.activated':
-        await handleSubscriptionActivated(event, supabase)
-        break
-
-      case 'subscription.charged':
-        await handleSubscriptionCharged(event, supabase)
-        break
-
-      case 'subscription.cancelled':
-        await handleSubscriptionCancelled(event, supabase)
-        break
-
-      case 'payment.failed':
-        await handlePaymentFailed(event, supabase)
-        break
-
-      default:
-        console.log(`Unhandled event type: ${eventType}`)
-    }
-
-    // Always return 200 to Razorpay (they retry on non-200)
-    return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error('Webhook processing failed:', error)
-    // Still return 200 to avoid retry loops
-    return NextResponse.json({ success: true })
+async function dispatchEvent(
+  event: RazorpayEvent,
+  supabase: Supabase,
+): Promise<void> {
+  switch (event.event) {
+    case "payment.captured":
+      await handlePaymentCaptured(event.payload.payment!.entity, supabase);
+      return;
+    case "subscription.activated":
+      await handleSubscriptionActivated(
+        event.payload.subscription!.entity,
+        supabase,
+      );
+      return;
+    case "subscription.charged":
+      await handleSubscriptionCharged(
+        event.payload.subscription!.entity,
+        supabase,
+      );
+      return;
+    case "subscription.cancelled":
+      await handleSubscriptionCancelled(
+        event.payload.subscription!.entity,
+        supabase,
+      );
+      return;
+    case "payment.failed":
+      await handlePaymentFailed(event.payload.payment!.entity, supabase);
+      return;
+    default:
+      logger.info("Razorpay webhook event type ignored", {
+        eventType: event.event,
+      });
   }
 }
 
-async function handlePaymentCaptured(event: { payload: { payment: { entity: Record<string, unknown> } } }, supabase: { from: (table: string) => { update: (data: Record<string, unknown>) => { eq: (field: string, value: string) => unknown } } }) {
-  const payment = event.payload.payment.entity
-  const notes = payment.notes as Record<string, string>
-  const orgId = notes.org_id
-  const plan = notes.plan
-  const billingCycle = notes.billing_cycle
+async function handlePaymentCaptured(
+  payment: RazorpayPayment,
+  supabase: Supabase,
+): Promise<void> {
+  const notes = payment.notes ?? {};
+  const orgId = notes.org_id;
+  const plan = notes.plan;
+  const billingCycle = notes.billing_cycle;
+  const billingState = notes.billing_state || undefined;
+  const gstNumber = notes.gst_number || undefined;
+  const baseAmountPaise = Number(notes.base_amount) || 0;
 
   if (!orgId) {
-    console.error('Missing org_id in payment notes')
-    return
+    throw new Error("payment.captured missing org_id in notes");
   }
 
-  // Update organization plan
-  const planExpiresAt = billingCycle === 'yearly' 
-    ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
-    : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+  const planExpiresAt =
+    billingCycle === "yearly"
+      ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
-  await supabase
-    .from('organizations')
+  const { error: updErr } = await supabase
+    .from("organizations")
     .update({
       plan,
       plan_expires_at: planExpiresAt.toISOString(),
-      razorpay_customer_id: payment.customer_id,
+      razorpay_customer_id: payment.customer_id ?? null,
     })
-    .eq('id', orgId)
+    .eq("id", orgId);
+  if (updErr) throw new Error(`Plan update failed: ${updErr.message}`);
 
-  // Generate invoice
-  const baseAmount = payment.amount as number
-  const currency = payment.currency as string
-
-  const gstBreakdown = {
-    baseAmount,
-    cgst: 0,
-    sgst: 0,
-    igst: 0,
-    totalAmount: baseAmount,
-    isInterState: false,
-  }
+  // Recompute GST from the customer state so the invoice matches what was
+  // shown at checkout. If base_amount wasn't carried on the notes we fall
+  // back to the gross payment amount (which already includes GST).
+  const gross = baseAmountPaise > 0 ? baseAmountPaise : payment.amount;
+  const companyState = process.env.COMPANY_GST_STATE || "Karnataka";
+  const gstBreakdown = calculateGST(
+    gross,
+    billingState || companyState,
+    companyState,
+  );
 
   await generateInvoice({
     orgId,
-    razorpayPaymentId: payment.id as string,
-    baseAmount,
-    currency,
+    razorpayPaymentId: payment.id,
+    baseAmount: gross,
+    currency: payment.currency,
     gstBreakdown,
-    gstNumber: notes.gst_number,
-    billingState: notes.billing_state,
-  })
+    gstNumber,
+    billingState,
+  });
 }
 
-async function handleSubscriptionActivated(event: { payload: { subscription: { entity: Record<string, unknown> } } }, supabase: { from: (table: string) => { update: (data: Record<string, unknown>) => { eq: (field: string, value: string) => unknown } } }) {
-  const subscription = event.payload.subscription.entity
-  const notes = subscription.notes as Record<string, string>
-  const orgId = notes.org_id
-  const plan = notes.plan
-
+async function handleSubscriptionActivated(
+  subscription: RazorpaySubscription,
+  supabase: Supabase,
+): Promise<void> {
+  const notes = subscription.notes ?? {};
+  const orgId = notes.org_id;
+  const plan = notes.plan;
   if (!orgId) {
-    console.error('Missing org_id in subscription notes')
-    return
+    throw new Error("subscription.activated missing org_id in notes");
   }
 
-  // Calculate plan expiry from subscription end date
-  const planExpiresAt = new Date((subscription.current_end as number) * 1000)
+  const planExpiresAt = new Date(subscription.current_end * 1000);
 
-  await supabase
-    .from('organizations')
+  const { error } = await supabase
+    .from("organizations")
     .update({
       plan,
       plan_expires_at: planExpiresAt.toISOString(),
-      razorpay_subscription_id: subscription.id as string,
+      razorpay_subscription_id: subscription.id,
     })
-    .eq('id', orgId)
+    .eq("id", orgId);
+  if (error)
+    throw new Error(`Subscription activation failed: ${error.message}`);
 }
 
-async function handleSubscriptionCharged(event: { payload: { subscription: { entity: Record<string, unknown> } } }, supabase: { from: (table: string) => { update: (data: Record<string, unknown>) => { eq: (field: string, value: string) => unknown } } }) {
-  const subscription = event.payload.subscription.entity
-  const notes = subscription.notes as Record<string, string>
-  const orgId = notes.org_id
-
+async function handleSubscriptionCharged(
+  subscription: RazorpaySubscription,
+  supabase: Supabase,
+): Promise<void> {
+  const notes = subscription.notes ?? {};
+  const orgId = notes.org_id;
   if (!orgId) {
-    console.error('Missing org_id in subscription notes')
-    return
+    throw new Error("subscription.charged missing org_id in notes");
   }
 
-  // Update plan expiry
-  const planExpiresAt = new Date((subscription.current_end as number) * 1000)
+  const planExpiresAt = new Date(subscription.current_end * 1000);
 
-  await supabase
-    .from('organizations')
+  const { error } = await supabase
+    .from("organizations")
+    .update({ plan_expires_at: planExpiresAt.toISOString() })
+    .eq("id", orgId);
+  if (error) throw new Error(`Subscription renewal failed: ${error.message}`);
+}
+
+async function handleSubscriptionCancelled(
+  subscription: RazorpaySubscription,
+  supabase: Supabase,
+): Promise<void> {
+  const notes = subscription.notes ?? {};
+  const orgId = notes.org_id;
+  if (!orgId) {
+    throw new Error("subscription.cancelled missing org_id in notes");
+  }
+
+  const planExpiresAt = new Date(subscription.current_end * 1000);
+
+  const { error } = await supabase
+    .from("organizations")
     .update({
+      plan: "free",
       plan_expires_at: planExpiresAt.toISOString(),
     })
-    .eq('id', orgId)
+    .eq("id", orgId);
+  if (error)
+    throw new Error(`Subscription cancellation failed: ${error.message}`);
 }
 
-async function handleSubscriptionCancelled(event: { payload: { subscription: { entity: Record<string, unknown> } } }, supabase: { from: (table: string) => { update: (data: Record<string, unknown>) => { eq: (field: string, value: string) => unknown } } }) {
-  const subscription = event.payload.subscription.entity
-  const notes = subscription.notes as Record<string, string>
-  const orgId = notes.org_id
-
+async function handlePaymentFailed(
+  payment: RazorpayPayment,
+  supabase: Supabase,
+): Promise<void> {
+  const notes = payment.notes ?? {};
+  const orgId = notes.org_id;
   if (!orgId) {
-    console.error('Missing org_id in subscription notes')
-    return
+    throw new Error("payment.failed missing org_id in notes");
   }
 
-  // Downgrade to free plan at period end
-  const planExpiresAt = new Date((subscription.current_end as number) * 1000)
-
-  await supabase
-    .from('organizations')
-    .update({
-      plan: 'free',
-      plan_expires_at: planExpiresAt.toISOString(),
-    })
-    .eq('id', orgId)
-}
-
-async function handlePaymentFailed(event: { payload: { payment: { entity: Record<string, unknown> } } }, supabase: { from: (table: string) => { insert: (data: Record<string, unknown>) => unknown } }) {
-  const payment = event.payload.payment.entity
-  const notes = payment.notes as Record<string, string>
-  const orgId = notes.org_id
-
-  if (!orgId) {
-    console.error('Missing org_id in payment notes')
-    return
-  }
-
-  // Create notification for org owner
-  await supabase
-    .from('notifications')
-    .insert({
-      user_id: null, // Will be set by trigger or separate logic
-      org_id: orgId,
-      type: 'payment_failed',
-      title: 'Payment Failed',
-      body: `Your payment of ₹${(payment.amount as number) / 100} failed. Please try again.`,
-      link: '/settings/billing',
-    })
+  const { error } = await supabase.from("notifications").insert({
+    user_id: null,
+    org_id: orgId,
+    type: "payment_failed",
+    title: "Payment Failed",
+    body: `Your payment of ₹${(payment.amount / 100).toFixed(2)} failed. Please try again.`,
+    link: "/settings/billing",
+  });
+  if (error) throw new Error(`Notification insert failed: ${error.message}`);
 }

@@ -19,7 +19,15 @@ export default defineConfig({
       // service client) are tracked as Phase 3 tech debt (see
       // specs/tasks.md P3-TD-02) and will be added here once their mocks are
       // in place.
-      include: ["src/lib/logger.ts", "src/lib/webhooks/**"],
+      // Scope to files that have dedicated unit tests. `razorpay.ts` and
+      // `invoice.ts` are exercised indirectly by billing-webhook route tests
+      // (which mock them) — tracked as coverage debt for Phase 5.
+      include: [
+        "src/lib/logger.ts",
+        "src/lib/webhooks/**",
+        "src/lib/gst.ts",
+        "src/lib/plan-limits.ts",
+      ],
       exclude: [
         "node_modules/",
         ".next/",
