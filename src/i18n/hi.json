@@ -9,7 +9,9 @@
     "media": "मीडिया",
     "ai_studio": "AI Studio",
     "settings": "सेटिंग्स",
-    "whatsapp": "WhatsApp"
+    "whatsapp": "WhatsApp",
+    "home": "होम",
+    "publish": "प्रकाशित करें"
   },
   "common": {
     "save": "सेव करें",
@@ -41,7 +43,11 @@
     "all": "सभी",
     "no_data": "कोई डेटा उपलब्ध नहीं",
     "something_went_wrong": "कुछ गलत हो गया",
-    "please_try_again": "कृपया फिर से प्रयास करें"
+    "please_try_again": "कृपया फिर से प्रयास करें",
+    "unable_to_load": "सामग्री लोड नहीं हो सकी",
+    "not_found_title": "पृष्ठ नहीं मिला",
+    "not_found_desc": "आप जो पृष्ठ ढूंढ रहे हैं वह मौजूद नहीं है या हटा दिया गया है।",
+    "back_to_dashboard": "डैशबोर्ड पर वापस जाएं"
   },
   "auth": {
     "sign_in": "साइन इन करें",
@@ -77,7 +83,14 @@
     "subtitle": "आपका सोशल मीडिया कंट्रोल सेंटर। खाते जोड़ें और प्रबंधन शुरू करें।",
     "connect_cta": "सोशल खाता जोड़ें",
     "create_post_cta": "अपनी पहली पोस्ट बनाएं",
-    "quick_actions": "त्वरित क्रियाएं"
+    "quick_actions": "त्वरित क्रियाएं",
+    "compose_title": "लिखें",
+    "compose_desc": "अपने सभी सोशल प्रोफाइल पर पोस्ट बनाएं और शेड्यूल करें।",
+    "connect_title": "जोड़ें",
+    "connect_desc": "अपने सोशल मीडिया अकाउंट लिंक करें और यहाँ प्रबंधित करें।",
+    "analytics_title": "Analytics",
+    "analytics_desc": "अपने सभी जुड़े प्रोफाइल का प्रदर्शन ट्रैक करें।",
+    "view_analytics": "Analytics देखें"
   },
   "publishing": {
     "title": "प्रकाशन",

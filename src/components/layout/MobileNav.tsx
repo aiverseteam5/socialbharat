@@ -3,18 +3,20 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { t, getLocale } from "@/lib/i18n";
 import { Home, PenTool, Inbox, BarChart3, Settings } from "lucide-react";
 
 const navItems = [
-  { name: "Home", href: "/dashboard", icon: Home },
-  { name: "Publish", href: "/publishing", icon: PenTool },
-  { name: "Inbox", href: "/inbox", icon: Inbox },
-  { name: "Analytics", href: "/analytics", icon: BarChart3 },
-  { name: "Settings", href: "/settings", icon: Settings },
+  { key: "nav.home", href: "/dashboard", icon: Home },
+  { key: "nav.publish", href: "/publishing", icon: PenTool },
+  { key: "nav.inbox", href: "/inbox", icon: Inbox },
+  { key: "nav.analytics", href: "/analytics", icon: BarChart3 },
+  { key: "nav.settings", href: "/settings", icon: Settings },
 ];
 
 export function MobileNav() {
   const pathname = usePathname();
+  const locale = getLocale();
 
   return (
     <nav
@@ -23,11 +25,12 @@ export function MobileNav() {
     >
       {navItems.map((item) => {
         const Icon = item.icon;
+        const name = t(item.key, locale);
         const isActive =
           pathname === item.href || pathname?.startsWith(item.href + "/");
         return (
           <Link
-            key={item.name}
+            key={item.key}
             href={item.href}
             className={cn(
               "flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg transition-colors min-w-[52px]",
@@ -35,7 +38,7 @@ export function MobileNav() {
                 ? "text-brand-600"
                 : "text-slate-400 hover:text-slate-700",
             )}
-            aria-label={item.name}
+            aria-label={name}
           >
             <Icon
               className={cn(
@@ -49,7 +52,7 @@ export function MobileNav() {
                 isActive && "font-semibold",
               )}
             >
-              {item.name}
+              {name}
             </span>
           </Link>
         );
