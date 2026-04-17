@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { t, getLocale } from "@/lib/i18n";
 import {
   LayoutDashboard,
   PenTool,
@@ -16,19 +17,20 @@ import {
 } from "lucide-react";
 
 const navItems = [
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Publishing", href: "/publishing", icon: PenTool },
-  { name: "Inbox", href: "/inbox", icon: Inbox },
-  { name: "Analytics", href: "/analytics", icon: BarChart3 },
-  { name: "Listening", href: "/listening", icon: Radio },
-  { name: "Media", href: "/media", icon: Image },
-  { name: "WhatsApp", href: "/whatsapp", icon: MessageCircle },
-  { name: "AI Studio", href: "/dashboard/ai-studio", icon: Sparkles },
-  { name: "Settings", href: "/settings", icon: Settings },
+  { key: "nav.dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { key: "nav.publishing", href: "/publishing", icon: PenTool },
+  { key: "nav.inbox", href: "/inbox", icon: Inbox },
+  { key: "nav.analytics", href: "/analytics", icon: BarChart3 },
+  { key: "nav.listening", href: "/listening", icon: Radio },
+  { key: "nav.media", href: "/media", icon: Image },
+  { key: "nav.whatsapp", href: "/whatsapp", icon: MessageCircle },
+  { key: "nav.ai_studio", href: "/dashboard/ai-studio", icon: Sparkles },
+  { key: "nav.settings", href: "/settings", icon: Settings },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
+  const locale = getLocale();
 
   return (
     <aside className="hidden md:flex flex-col w-64 h-screen bg-[#0f172a] shrink-0">
@@ -46,12 +48,13 @@ export function Sidebar() {
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
         {navItems.map((item) => {
           const Icon = item.icon;
+          const name = t(item.key, locale);
           const isActive =
             pathname === item.href ||
             (item.href !== "/dashboard" && pathname?.startsWith(item.href));
           return (
             <Link
-              key={item.name}
+              key={item.key}
               href={item.href}
               className={cn(
                 "group relative flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-all duration-200",
@@ -71,7 +74,7 @@ export function Sidebar() {
                     : "text-slate-500 group-hover:text-slate-300",
                 )}
               />
-              {item.name}
+              {name}
             </Link>
           );
         })}

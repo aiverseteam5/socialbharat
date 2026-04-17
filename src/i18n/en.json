@@ -9,7 +9,9 @@
     "media": "Media",
     "ai_studio": "AI Studio",
     "settings": "Settings",
-    "whatsapp": "WhatsApp"
+    "whatsapp": "WhatsApp",
+    "home": "Home",
+    "publish": "Publish"
   },
   "common": {
     "save": "Save",
@@ -41,7 +43,11 @@
     "all": "All",
     "no_data": "No data available",
     "something_went_wrong": "Something went wrong",
-    "please_try_again": "Please try again"
+    "please_try_again": "Please try again",
+    "unable_to_load": "Unable to load content",
+    "not_found_title": "Page not found",
+    "not_found_desc": "The page you're looking for doesn't exist or has been moved.",
+    "back_to_dashboard": "Back to Dashboard"
   },
   "auth": {
     "sign_in": "Sign In",
@@ -77,7 +83,14 @@
     "subtitle": "Your social media command centre. Connect accounts and start managing.",
     "connect_cta": "Connect a Social Account",
     "create_post_cta": "Create Your First Post",
-    "quick_actions": "Quick actions"
+    "quick_actions": "Quick actions",
+    "compose_title": "Compose",
+    "compose_desc": "Create and schedule posts across all your social profiles.",
+    "connect_title": "Connect",
+    "connect_desc": "Link your social media accounts to start managing them here.",
+    "analytics_title": "Analytics",
+    "analytics_desc": "Track performance across all your connected profiles.",
+    "view_analytics": "View Analytics"
   },
   "publishing": {
     "title": "Publishing",

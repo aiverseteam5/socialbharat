@@ -14,10 +14,12 @@ import { Bell, Menu } from "lucide-react";
 import { useAuthStore } from "@/stores/auth-store";
 import { useRouter } from "next/navigation";
 import { LanguageSwitcher } from "@/components/common/LanguageSwitcher";
+import { t, getLocale } from "@/lib/i18n";
 
 export function Header() {
   const { user, currentOrg, role, signOut } = useAuthStore();
   const router = useRouter();
+  const locale = getLocale();
 
   const userInitial =
     user?.user_metadata?.full_name?.[0] || user?.email?.[0] || "U";
@@ -92,14 +94,14 @@ export function Header() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => router.push("/settings/team")}>
-              Settings
+              {t("nav.settings", locale)}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={signOut}
               className="text-red-600 focus:text-red-600"
             >
-              Sign out
+              {t("common.sign_out", locale)}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

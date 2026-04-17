@@ -20,11 +20,13 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center gap-3 pb-2">
             <PenTool className="h-5 w-5 text-primary" />
-            <CardTitle className="text-base">Compose</CardTitle>
+            <CardTitle className="text-base">
+              {t("dashboard.compose_title", locale)}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
-              Create and schedule posts across all your social profiles.
+              {t("dashboard.compose_desc", locale)}
             </p>
             <Button asChild size="sm" className="w-full">
               <Link href="/publishing/compose">
@@ -37,11 +39,13 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center gap-3 pb-2">
             <Share2 className="h-5 w-5 text-primary" />
-            <CardTitle className="text-base">Connect</CardTitle>
+            <CardTitle className="text-base">
+              {t("dashboard.connect_title", locale)}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
-              Link your social media accounts to start managing them here.
+              {t("dashboard.connect_desc", locale)}
             </p>
             <Button asChild size="sm" variant="outline" className="w-full">
               <Link href="/settings/social-accounts">
@@ -54,14 +58,18 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center gap-3 pb-2">
             <BarChart3 className="h-5 w-5 text-primary" />
-            <CardTitle className="text-base">Analytics</CardTitle>
+            <CardTitle className="text-base">
+              {t("dashboard.analytics_title", locale)}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
-              Track performance across all your connected profiles.
+              {t("dashboard.analytics_desc", locale)}
             </p>
             <Button asChild size="sm" variant="outline" className="w-full">
-              <Link href="/analytics">View Analytics</Link>
+              <Link href="/analytics">
+                {t("dashboard.view_analytics", locale)}
+              </Link>
             </Button>
           </CardContent>
         </Card>
