@@ -1,76 +1,70 @@
-import { createClient } from '@/lib/supabase/server'
-import { type GSTBreakdown } from './gst'
+import { createServiceClient } from "@/lib/supabase/service";
+import { logger } from "@/lib/logger";
+import { type GSTBreakdown } from "./gst";
 
 /**
- * GST-compliant invoice generation
- * HSN/SAC code: 998314 (SaaS services)
+ * GST-compliant invoice generation.
+ * HSN/SAC code: 998314 (online information / SaaS services).
+ *
+ * All monetary columns are stored in paise (integer). The caller passes
+ * the already-calculated GST breakdown from src/lib/gst.ts.
  */
 
 export interface InvoiceData {
-  orgId: string
-  razorpayPaymentId?: string
-  stripePaymentId?: string
-  baseAmount: number // in paise
-  currency: string
-  gstBreakdown: GSTBreakdown
-  gstNumber?: string
-  billingState?: string
+  orgId: string;
+  razorpayPaymentId?: string;
+  stripePaymentId?: string;
+  baseAmount: number; // paise
+  currency: string;
+  gstBreakdown: GSTBreakdown;
+  gstNumber?: string;
+  billingState?: string;
 }
 
 export interface InvoiceRecord {
-  id: string
-  invoice_number: string
-  org_id: string
-  razorpay_payment_id: string | null
-  stripe_payment_id: string | null
-  base_amount: number
-  currency: string
-  cgst: number
-  sgst: number
-  igst: number
-  total_amount: number
-  gst_number: string | null
-  billing_state: string | null
-  status: string
-  pdf_url: string | null
-  created_at: string
+  id: string;
+  invoice_number: string;
+  org_id: string;
+  razorpay_payment_id: string | null;
+  stripe_payment_id: string | null;
+  base_amount: number;
+  currency: string;
+  cgst: number;
+  sgst: number;
+  igst: number;
+  total_amount: number;
+  gst_number: string | null;
+  billing_state: string | null;
+  status: string;
+  pdf_url: string | null;
+  created_at: string;
 }
 
 /**
- * Generate sequential invoice number
- * Format: SB-YYYY-XXXX (e.g., SB-2025-0001)
+ * Pull the next invoice number atomically via the Postgres function
+ * `next_invoice_number()` created in migration 00005. Backed by a sequence,
+ * so two concurrent webhooks can never receive the same value.
  */
-async function generateInvoiceNumber(): Promise<string> {
-  const supabase = await createClient()
-  const year = new Date().getFullYear()
+async function nextInvoiceNumber(): Promise<string> {
+  const supabase = createServiceClient();
+  const { data, error } = await supabase.rpc("next_invoice_number");
 
-  // Get the last invoice number for this year
-  const { data: lastInvoice } = await supabase
-    .from('invoices')
-    .select('invoice_number')
-    .ilike('invoice_number', `SB-${year}-%`)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single()
-
-  let sequence = 1
-  if (lastInvoice) {
-    const lastSequence = parseInt(lastInvoice.invoice_number.split('-')[2], 10)
-    sequence = lastSequence + 1
+  if (error || typeof data !== "string") {
+    throw new Error(
+      `Failed to generate invoice number: ${error?.message ?? "unknown"}`,
+    );
   }
-
-  const sequenceStr = sequence.toString().padStart(4, '0')
-  return `SB-${year}-${sequenceStr}`
+  return data;
 }
 
 /**
- * Generate GST-compliant invoice
- * Creates invoice record in database with sequential invoice number
+ * Insert a paid invoice record. Uses the service-role client so that
+ * server-side webhooks can write regardless of RLS.
  */
 export async function generateInvoice(
-  data: InvoiceData
+  data: InvoiceData,
 ): Promise<InvoiceRecord> {
-  const supabase = await createClient()
+  const supabase = createServiceClient();
   const {
     orgId,
     razorpayPaymentId,
@@ -80,9 +74,9 @@ export async function generateInvoice(
     gstBreakdown,
     gstNumber,
     billingState,
-  } = data
+  } = data;
 
-  const invoiceNumber = await generateInvoiceNumber()
+  const invoiceNumber = await nextInvoiceNumber();
 
   const invoiceData = {
     org_id: orgId,
@@ -97,65 +91,61 @@ export async function generateInvoice(
     total_amount: gstBreakdown.totalAmount,
     gst_number: gstNumber || null,
     billing_state: billingState || null,
-    status: 'paid',
-    pdf_url: null, // PDF generation can be added later
-  }
+    status: "paid",
+    pdf_url: null,
+  };
 
   const { data: invoice, error } = await supabase
-    .from('invoices')
+    .from("invoices")
     .insert(invoiceData)
     .select()
-    .single()
+    .single();
 
   if (error) {
-    console.error('Invoice generation failed:', error)
-    throw new Error(error.message)
+    logger.error("Invoice generation failed", error, { orgId, invoiceNumber });
+    throw new Error(error.message);
   }
 
-  return invoice
+  return invoice as InvoiceRecord;
 }
 
-/**
- * Get invoice details by ID
- */
-export async function getInvoiceById(invoiceId: string): Promise<InvoiceRecord | null> {
-  const supabase = await createClient()
+export async function getInvoiceById(
+  invoiceId: string,
+): Promise<InvoiceRecord | null> {
+  const supabase = createServiceClient();
 
   const { data: invoice, error } = await supabase
-    .from('invoices')
-    .select('*')
-    .eq('id', invoiceId)
-    .single()
+    .from("invoices")
+    .select("*")
+    .eq("id", invoiceId)
+    .single();
 
   if (error) {
-    console.error('Failed to fetch invoice:', error)
-    return null
+    logger.error("Failed to fetch invoice", error, { invoiceId });
+    return null;
   }
 
-  return invoice
+  return invoice as InvoiceRecord;
 }
 
-/**
- * List invoices for an organization
- */
 export async function listInvoicesForOrg(
   orgId: string,
-  limit: number = 20,
-  offset: number = 0
+  limit = 20,
+  offset = 0,
 ): Promise<InvoiceRecord[]> {
-  const supabase = await createClient()
+  const supabase = createServiceClient();
 
   const { data: invoices, error } = await supabase
-    .from('invoices')
-    .select('*')
-    .eq('org_id', orgId)
-    .order('created_at', { ascending: false })
-    .range(offset, offset + limit - 1)
+    .from("invoices")
+    .select("*")
+    .eq("org_id", orgId)
+    .order("created_at", { ascending: false })
+    .range(offset, offset + limit - 1);
 
   if (error) {
-    console.error('Failed to fetch invoices:', error)
-    return []
+    logger.error("Failed to fetch invoices", error, { orgId });
+    return [];
   }
 
-  return invoices || []
+  return (invoices || []) as InvoiceRecord[];
 }

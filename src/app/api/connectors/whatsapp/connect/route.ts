@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { encrypt } from "@/lib/encryption";
+import { checkNumericLimit } from "@/lib/plan-limits";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -42,6 +43,19 @@ export async function POST(request: NextRequest) {
     }
 
     const orgId = orgMember.org_id;
+
+    const profileLimit = await checkNumericLimit(orgId, "max_social_profiles");
+    if (!profileLimit.allowed) {
+      return NextResponse.json(
+        {
+          error: "Social profile limit reached for your plan",
+          code: "PLAN_LIMIT_EXCEEDED",
+          limit: { current: profileLimit.current, max: profileLimit.max },
+        },
+        { status: 403 },
+      );
+    }
+
     const encryptedToken = encrypt(parsed.accessToken);
 
     // Store WhatsApp profile

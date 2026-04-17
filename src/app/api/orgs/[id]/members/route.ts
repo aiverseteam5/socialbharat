@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, requireRole } from "@/lib/auth";
+import { checkNumericLimit } from "@/lib/plan-limits";
 import { idParamSchema, inviteMemberSchema } from "@/types/schemas";
 import { randomUUID } from "crypto";
 import { logger } from "@/lib/logger";
@@ -112,6 +113,20 @@ export async function POST(
     }
 
     const { email, phone, role } = inviteValidation.data;
+
+    // Plan gate: team-member cap. Counts current members; invitations not
+    // yet accepted aren't counted here — the limit is enforced on accept.
+    const memberLimit = await checkNumericLimit(orgId, "max_users");
+    if (!memberLimit.allowed) {
+      return NextResponse.json(
+        {
+          error: "Team member limit reached for your plan",
+          code: "PLAN_LIMIT_EXCEEDED",
+          limit: { current: memberLimit.current, max: memberLimit.max },
+        },
+        { status: 403 },
+      );
+    }
 
     const supabase = await createClient();
 

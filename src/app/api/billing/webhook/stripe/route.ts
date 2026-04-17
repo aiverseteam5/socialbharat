@@ -1,214 +1,249 @@
-import { createClient } from '@/lib/supabase/server'
-import Stripe from 'stripe'
-import { generateInvoice } from '@/lib/invoice'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from "next/server";
+import Stripe from "stripe";
+import { createServiceClient } from "@/lib/supabase/service";
+import { generateInvoice } from "@/lib/invoice";
+import { calculateGST } from "@/lib/gst";
+import { logger } from "@/lib/logger";
+
+export const runtime = "nodejs";
 
 /**
  * POST /api/billing/webhook/stripe
- * Handle Stripe webhook events for international payments
- * Verify signature and check idempotency before processing
+ *
+ * Processes Stripe webhook events. Same error contract as the Razorpay
+ * handler: 200 on success / duplicate, 400 on bad signature, 500 on
+ * processing failure so Stripe retries.
  */
+
+type Supabase = ReturnType<typeof createServiceClient>;
+
 export async function POST(request: NextRequest) {
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const stripeKey = process.env.STRIPE_SECRET_KEY;
+  if (!webhookSecret || !stripeKey) {
+    logger.error("Stripe webhook/secret env vars not configured");
+    return NextResponse.json(
+      { error: "Webhook secret not configured" },
+      { status: 500 },
+    );
+  }
+
+  const signature = request.headers.get("stripe-signature");
+  if (!signature) {
+    return NextResponse.json({ error: "Missing signature" }, { status: 400 });
+  }
+
+  const body = await request.text();
+
+  const stripe = new Stripe(stripeKey);
+  let event: Stripe.Event;
   try {
-    const stripeSecret = process.env.STRIPE_WEBHOOK_SECRET
-    if (!stripeSecret) {
-      console.error('STRIPE_WEBHOOK_SECRET not configured')
-      return NextResponse.json({ error: 'Webhook secret not configured' }, { status: 500 })
-    }
+    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+  } catch (err) {
+    logger.warn("Invalid Stripe webhook signature", {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+  }
 
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+  const supabase = createServiceClient();
 
-    // Get signature from header
-    const signature = request.headers.get('stripe-signature')
-    if (!signature) {
-      console.error('Missing Stripe signature')
-      return NextResponse.json({ error: 'Missing signature' }, { status: 400 })
-    }
+  const { data: existing, error: existingErr } = await supabase
+    .from("webhook_events")
+    .select("id")
+    .eq("provider", "stripe")
+    .eq("event_id", event.id)
+    .maybeSingle();
 
-    // Get raw body for signature verification
-    const body = await request.text()
+  if (existingErr) {
+    logger.error("Failed to query webhook_events", existingErr, {
+      eventId: event.id,
+    });
+    return NextResponse.json({ error: "Storage error" }, { status: 500 });
+  }
+  if (existing) {
+    return NextResponse.json({ success: true, duplicate: true });
+  }
 
-    // Verify webhook signature
-    let event: Stripe.Event
-    try {
-      event = stripe.webhooks.constructEvent(body, signature, stripeSecret)
-    } catch (err) {
-      console.error('Invalid Stripe webhook signature:', err)
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
-    }
+  try {
+    await dispatchEvent(event, stripe, supabase);
+  } catch (err) {
+    logger.error("Stripe webhook handler failed", err, {
+      eventId: event.id,
+      eventType: event.type,
+    });
+    return NextResponse.json({ error: "Processing failed" }, { status: 500 });
+  }
 
-    const eventId = event.id
-    const eventType = event.type
+  const { error: insertErr } = await supabase.from("webhook_events").insert({
+    provider: "stripe",
+    event_id: event.id,
+    event_type: event.type,
+    payload: event as unknown as Record<string, unknown>,
+  });
+  if (insertErr) {
+    logger.error("Failed to record processed webhook event", insertErr, {
+      eventId: event.id,
+    });
+    return NextResponse.json({ error: "Storage error" }, { status: 500 });
+  }
 
-    // Check idempotency - if event already processed, skip
-    const supabase = await createClient()
-    
-    const { data: existingEvent } = await supabase
-      .from('webhook_events')
-      .select('id')
-      .eq('provider', 'stripe')
-      .eq('event_id', eventId)
-      .single()
+  return NextResponse.json({ success: true });
+}
 
-    if (existingEvent) {
-      console.log(`Event ${eventId} already processed, skipping`)
-      return NextResponse.json({ success: true, message: 'Event already processed' })
-    }
-
-    // Insert webhook event record for idempotency
-    await supabase
-      .from('webhook_events')
-      .insert({
-        provider: 'stripe',
-        event_id: eventId,
-        event_type: eventType,
-        payload: event,
-      })
-
-    // Handle different event types
-    switch (eventType) {
-      case 'checkout.session.completed':
-        await handleCheckoutSessionCompleted(event, supabase)
-        break
-
-      case 'customer.subscription.deleted':
-        await handleSubscriptionDeleted(event, supabase)
-        break
-
-      case 'invoice.payment_succeeded':
-        await handleInvoicePaymentSucceeded(event, supabase)
-        break
-
-      case 'invoice.payment_failed':
-        await handleInvoicePaymentFailed(event, supabase)
-        break
-
-      default:
-        console.log(`Unhandled event type: ${eventType}`)
-    }
-
-    // Always return 200 to Stripe (they retry on non-200)
-    return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error('Stripe webhook processing failed:', error)
-    // Still return 200 to avoid retry loops
-    return NextResponse.json({ success: true })
+async function dispatchEvent(
+  event: Stripe.Event,
+  stripe: Stripe,
+  supabase: Supabase,
+): Promise<void> {
+  switch (event.type) {
+    case "checkout.session.completed":
+      await handleCheckoutCompleted(
+        event.data.object as Stripe.Checkout.Session,
+        supabase,
+      );
+      return;
+    case "customer.subscription.deleted":
+      await handleSubscriptionDeleted(
+        event.data.object as Stripe.Subscription,
+        supabase,
+      );
+      return;
+    case "invoice.payment_succeeded":
+      await handleInvoicePaymentSucceeded(
+        event.data.object as Stripe.Invoice,
+        stripe,
+        supabase,
+      );
+      return;
+    case "invoice.payment_failed":
+      await handleInvoicePaymentFailed(
+        event.data.object as Stripe.Invoice,
+        supabase,
+      );
+      return;
+    default:
+      logger.info("Stripe webhook event type ignored", {
+        eventType: event.type,
+      });
   }
 }
 
-async function handleCheckoutSessionCompleted(event: Stripe.Event, supabase: { from: (table: string) => { update: (data: Record<string, unknown>) => { eq: (field: string, value: string) => unknown } } }) {
-  const session = event.data.object as Stripe.Checkout.Session
-  const metadata = session.metadata as Record<string, string>
-
-  if (!metadata || !metadata.org_id) {
-    console.error('Missing org_id in checkout session metadata')
-    return
-  }
-
-  const orgId = metadata.org_id
+function requireOrgId(
+  metadata: Stripe.Metadata | null | undefined,
+  eventLabel: string,
+): string {
+  const orgId = metadata?.org_id;
   if (!orgId) {
-    console.error('Missing org_id in checkout session metadata')
-    return
+    throw new Error(`${eventLabel} missing org_id in metadata`);
   }
-  const plan = metadata.plan || 'pro'
+  return orgId;
+}
 
-  // Update organization plan
-  const planExpiresAt = metadata.billing_cycle === 'yearly'
-    ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
-    : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+async function handleCheckoutCompleted(
+  session: Stripe.Checkout.Session,
+  supabase: Supabase,
+): Promise<void> {
+  const orgId = requireOrgId(session.metadata, "checkout.session.completed");
+  const plan = session.metadata?.plan || "pro";
+  const billingCycle = session.metadata?.billing_cycle;
+  const billingState = session.metadata?.billing_state || undefined;
+  const gstNumber = session.metadata?.gst_number || undefined;
 
-  await supabase
-    .from('organizations')
+  const planExpiresAt =
+    billingCycle === "yearly"
+      ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+  const { error: updErr } = await supabase
+    .from("organizations")
     .update({
       plan,
       plan_expires_at: planExpiresAt.toISOString(),
-      stripe_customer_id: session.customer as string,
+      stripe_customer_id:
+        typeof session.customer === "string" ? session.customer : null,
     })
-    .eq('id', orgId)
+    .eq("id", orgId);
+  if (updErr) throw new Error(`Plan update failed: ${updErr.message}`);
 
-  // Generate invoice
-  const totalAmount = session.amount_total || 0
-  const currency = session.currency?.toUpperCase() || 'USD'
+  const totalAmount = session.amount_total ?? 0;
+  const currency = session.currency?.toUpperCase() || "USD";
 
-  const gstBreakdown = {
-    baseAmount: totalAmount,
-    cgst: 0,
-    sgst: 0,
-    igst: 0,
-    totalAmount,
-    isInterState: false,
-  }
+  // Stripe checkout is primarily international — only run GST for INR.
+  const gstBreakdown =
+    currency === "INR" && billingState
+      ? calculateGST(
+          totalAmount,
+          billingState,
+          process.env.COMPANY_GST_STATE || "Karnataka",
+        )
+      : {
+          baseAmount: totalAmount,
+          cgst: 0,
+          sgst: 0,
+          igst: 0,
+          totalAmount,
+          isInterState: false,
+        };
 
   await generateInvoice({
     orgId,
-    stripePaymentId: session.payment_intent as string,
+    stripePaymentId:
+      typeof session.payment_intent === "string"
+        ? session.payment_intent
+        : undefined,
     baseAmount: totalAmount,
     currency,
     gstBreakdown,
-  })
+    gstNumber,
+    billingState,
+  });
 }
 
-async function handleSubscriptionDeleted(event: Stripe.Event, supabase: { from: (table: string) => { update: (data: Record<string, unknown>) => { eq: (field: string, value: string) => unknown } } }) {
-  const subscription = event.data.object as Stripe.Subscription
-  const metadata = subscription.metadata as Record<string, string>
+async function handleSubscriptionDeleted(
+  subscription: Stripe.Subscription,
+  supabase: Supabase,
+): Promise<void> {
+  const orgId = requireOrgId(
+    subscription.metadata,
+    "customer.subscription.deleted",
+  );
+  const planExpiresAt = new Date(subscription.current_period_end * 1000);
 
-  if (!metadata || !metadata.org_id) {
-    console.error('Missing org_id in subscription metadata')
-    return
-  }
-
-  const orgId = metadata.org_id
-  if (!orgId) {
-    console.error('Missing org_id in subscription metadata')
-    return
-  }
-
-  // Downgrade to free plan at period end
-  const planExpiresAt = new Date(subscription.current_period_end * 1000)
-
-  await supabase
-    .from('organizations')
+  const { error } = await supabase
+    .from("organizations")
     .update({
-      plan: 'free',
+      plan: "free",
       plan_expires_at: planExpiresAt.toISOString(),
     })
-    .eq('id', orgId)
+    .eq("id", orgId);
+  if (error) throw new Error(`Subscription delete failed: ${error.message}`);
 }
 
-async function handleInvoicePaymentSucceeded(event: Stripe.Event, supabase: { from: (table: string) => { update: (data: Record<string, unknown>) => { eq: (field: string, value: string) => unknown } } }) {
-  const invoice = event.data.object as Stripe.Invoice
-  const metadata = invoice.metadata as Record<string, string>
+async function handleInvoicePaymentSucceeded(
+  invoice: Stripe.Invoice,
+  stripe: Stripe,
+  supabase: Supabase,
+): Promise<void> {
+  const orgId = requireOrgId(invoice.metadata, "invoice.payment_succeeded");
 
-  if (!metadata || !metadata.org_id) {
-    console.error('Missing org_id in invoice metadata')
-    return
-  }
-
-  const orgId = metadata.org_id
-  if (!orgId) {
-    console.error('Missing org_id in invoice metadata')
-    return
-  }
-
-  // Update plan expiry if it's a subscription renewal
   if (invoice.subscription) {
-    const Stripe = (await import('stripe')).default
-    const stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY!)
-    const subscription = await stripeInstance.subscriptions.retrieve(invoice.subscription as string)
-    const planExpiresAt = new Date(subscription.current_period_end * 1000)
+    const subscriptionId =
+      typeof invoice.subscription === "string"
+        ? invoice.subscription
+        : invoice.subscription.id;
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    const planExpiresAt = new Date(subscription.current_period_end * 1000);
 
-    await supabase
-      .from('organizations')
-      .update({
-        plan_expires_at: planExpiresAt.toISOString(),
-      })
-      .eq('id', orgId)
+    const { error } = await supabase
+      .from("organizations")
+      .update({ plan_expires_at: planExpiresAt.toISOString() })
+      .eq("id", orgId);
+    if (error) throw new Error(`Expiry update failed: ${error.message}`);
   }
 
-  // Generate invoice
-  const totalAmount = invoice.amount_paid || 0
-  const currency = invoice.currency?.toUpperCase() || 'USD'
-
+  const totalAmount = invoice.amount_paid ?? 0;
+  const currency = invoice.currency?.toUpperCase() || "USD";
   const gstBreakdown = {
     baseAmount: totalAmount,
     cgst: 0,
@@ -216,41 +251,35 @@ async function handleInvoicePaymentSucceeded(event: Stripe.Event, supabase: { fr
     igst: 0,
     totalAmount,
     isInterState: false,
-  }
+  };
 
   await generateInvoice({
     orgId,
-    stripePaymentId: invoice.payment_intent as string,
+    stripePaymentId:
+      typeof invoice.payment_intent === "string"
+        ? invoice.payment_intent
+        : undefined,
     baseAmount: totalAmount,
     currency,
     gstBreakdown,
-  })
+  });
 }
 
-async function handleInvoicePaymentFailed(event: Stripe.Event, supabase: { from: (table: string) => { insert: (data: Record<string, unknown>) => unknown } }) {
-  const invoice = event.data.object as Stripe.Invoice
-  const metadata = invoice.metadata as Record<string, string>
+async function handleInvoicePaymentFailed(
+  invoice: Stripe.Invoice,
+  supabase: Supabase,
+): Promise<void> {
+  const orgId = requireOrgId(invoice.metadata, "invoice.payment_failed");
+  const amount = invoice.amount_due ?? 0;
+  const currency = invoice.currency?.toUpperCase() ?? "USD";
 
-  if (!metadata || !metadata.org_id) {
-    console.error('Missing org_id in invoice metadata')
-    return
-  }
-
-  const orgId = metadata.org_id
-  if (!orgId) {
-    console.error('Missing org_id in invoice metadata')
-    return
-  }
-
-  // Create notification for org owner
-  await supabase
-    .from('notifications')
-    .insert({
-      user_id: null,
-      org_id: orgId,
-      type: 'payment_failed',
-      title: 'Payment Failed',
-      body: `Your payment of ${invoice.currency?.toUpperCase()} ${(invoice.amount_due || 0) / 100} failed. Please try again.`,
-      link: '/settings/billing',
-    })
+  const { error } = await supabase.from("notifications").insert({
+    user_id: null,
+    org_id: orgId,
+    type: "payment_failed",
+    title: "Payment Failed",
+    body: `Your payment of ${currency} ${(amount / 100).toFixed(2)} failed. Please try again.`,
+    link: "/settings/billing",
+  });
+  if (error) throw new Error(`Notification insert failed: ${error.message}`);
 }

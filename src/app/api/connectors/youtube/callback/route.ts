@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { encrypt } from "@/lib/encryption";
 import { verifyState } from "@/lib/oauth-state";
+import { checkNumericLimit } from "@/lib/plan-limits";
 import { redirect } from "next/navigation";
 import { NextRequest } from "next/server";
 
@@ -95,6 +96,12 @@ export async function GET(request: NextRequest) {
     }
 
     const orgId = orgMember.org_id;
+
+    const profileLimit = await checkNumericLimit(orgId, "max_social_profiles");
+    if (!profileLimit.allowed) {
+      redirect("/dashboard/settings/social-accounts?error=plan_limit_reached");
+    }
+
     const encryptedToken = encrypt(accessToken);
 
     // Store YouTube channel
