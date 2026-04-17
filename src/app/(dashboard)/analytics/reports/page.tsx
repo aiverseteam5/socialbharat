@@ -1,11 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ReportBuilder } from "@/components/analytics/ReportBuilder";
+import { Skeleton } from "@/components/ui/skeleton";
 import { logger } from "@/lib/logger";
 import { t, getLocale } from "@/lib/i18n";
+
+const ReportBuilder = dynamic(
+  () =>
+    import("@/components/analytics/ReportBuilder").then((m) => m.ReportBuilder),
+  { loading: () => <Skeleton className="h-80 w-full" />, ssr: false },
+);
 
 interface SavedReport {
   id: string;
