@@ -286,7 +286,20 @@
     "no_accounts_desc": "Connect your social media accounts to get started.",
     "language": "Language",
     "language_subtitle": "Choose your preferred language.",
-    "save_preferences": "Save Preferences"
+    "save_preferences": "Save Preferences",
+    "privacy": "Privacy & Data",
+    "privacy_title": "Privacy & Data",
+    "privacy_subtitle": "Manage your personal data in accordance with the DPDP Act, 2023.",
+    "export_data": "Export My Data",
+    "export_data_desc": "Download a copy of all your data stored on SocialBharat as a JSON file.",
+    "export_downloading": "Downloading...",
+    "delete_account": "Delete Account",
+    "delete_account_desc": "Permanently delete your account and all associated data. This action cannot be undone.",
+    "delete_account_warning": "Warning: This will permanently delete your account, posts, and all associated data.",
+    "delete_confirm_label": "Type DELETE MY ACCOUNT to confirm",
+    "delete_confirm_button": "Permanently Delete Account",
+    "delete_cancel": "Cancel",
+    "deleting": "Deleting..."
   },
   "media": {
     "title": "Media Library",

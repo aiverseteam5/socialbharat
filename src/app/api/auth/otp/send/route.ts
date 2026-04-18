@@ -1,33 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendOtp } from "@/lib/msg91";
 import { sendOtpSchema } from "@/types/schemas";
+import { checkOtpSendRateLimit } from "@/lib/ratelimit";
 import { logger } from "@/lib/logger";
-
-// Simple in-memory rate limiting (for MVP - replace with Upstash Redis in production)
-const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
-
-function checkRateLimit(phone: string): boolean {
-  const now = Date.now();
-  const record = rateLimitMap.get(phone);
-
-  if (!record || now > record.resetTime) {
-    rateLimitMap.set(phone, { count: 1, resetTime: now + 10 * 60 * 1000 }); // 10 minutes
-    return true;
-  }
-
-  if (record.count >= 5) {
-    return false;
-  }
-
-  record.count++;
-  return true;
-}
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    // Validate with Zod schema
     const validationResult = sendOtpSchema.safeParse(body);
     if (!validationResult.success) {
       return NextResponse.json(
@@ -41,8 +21,8 @@ export async function POST(request: NextRequest) {
 
     const { phone } = validationResult.data;
 
-    // Rate limiting: 5 requests per phone per 10 minutes
-    if (!checkRateLimit(phone)) {
+    const rl = await checkOtpSendRateLimit(phone);
+    if (!rl.ok) {
       return NextResponse.json(
         { error: "Too many OTP requests. Please try again later." },
         { status: 429 },

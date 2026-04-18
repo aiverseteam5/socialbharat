@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { decrypt } from "@/lib/encryption";
 import { getPlatformConnector } from "@/lib/platforms";
+import { serverTrack } from "@/lib/analytics-server";
 import { NextRequest, NextResponse } from "next/server";
 
 /**
@@ -151,6 +152,14 @@ export async function POST(
 
     if (updateError) {
       throw updateError;
+    }
+
+    if (successCount > 0) {
+      void serverTrack(user.id, "completed_core_action", {
+        action: "published_post",
+        platforms: profiles.map((p) => p.platform),
+        success_count: successCount,
+      });
     }
 
     return NextResponse.json({

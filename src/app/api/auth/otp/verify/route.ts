@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyOtp } from "@/lib/msg91";
 import { verifyOtpSchema } from "@/types/schemas";
 import { createClient } from "@/lib/supabase/server";
+import { checkOtpVerifyRateLimit } from "@/lib/ratelimit";
+import { serverTrack } from "@/lib/analytics-server";
 import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
@@ -21,6 +23,14 @@ export async function POST(request: NextRequest) {
     }
 
     const { phone, otp } = validationResult.data;
+
+    const rl = await checkOtpVerifyRateLimit(phone);
+    if (!rl.ok) {
+      return NextResponse.json(
+        { error: "Too many verification attempts. Please try again later." },
+        { status: 429 },
+      );
+    }
 
     // Verify OTP via MSG91
     const otpResult = await verifyOtp(phone, otp);
@@ -97,6 +107,7 @@ export async function POST(request: NextRequest) {
       }
 
       isNewUser = true;
+      void serverTrack(userId, "signed_up", { auth_method: "otp" });
     }
 
     // Since phone-only auth is complex, we'll use the session from the verify flow

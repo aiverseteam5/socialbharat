@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createOrder } from "@/lib/razorpay";
 import { calculateGST } from "@/lib/gst";
+import { serverTrack } from "@/lib/analytics-server";
 import { logger } from "@/lib/logger";
 
 /**
@@ -127,6 +128,12 @@ export async function POST(request: NextRequest) {
         billing_state: parsed.data.billingState || "",
         base_amount: String(baseAmount), // paise; webhook uses this for GST
       },
+    });
+
+    void serverTrack(user.id, "started_checkout", {
+      plan: parsed.data.plan,
+      billing_cycle: parsed.data.billingCycle,
+      amount: order.amount,
     });
 
     return NextResponse.json({
