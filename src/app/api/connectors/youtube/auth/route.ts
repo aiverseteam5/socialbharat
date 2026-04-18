@@ -1,11 +1,25 @@
 import { redirect } from "next/navigation";
+import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 import { issueState } from "@/lib/oauth-state";
+import { checkConnectorAuthRateLimit } from "@/lib/ratelimit";
 
-/**
- * Initiate YouTube OAuth flow
- * Redirects user to Google OAuth page with required scopes
- */
 export async function GET() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const rl = await checkConnectorAuthRateLimit(user.id, "youtube");
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "Too many connection attempts. Please try again later." },
+      { status: 429 },
+    );
+  }
   const clientId = process.env.YOUTUBE_API_KEY;
   const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/connectors/youtube/callback`;
   const state = await issueState("youtube");

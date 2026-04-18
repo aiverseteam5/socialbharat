@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireAuth, requireRole } from "@/lib/auth";
 import { checkNumericLimit } from "@/lib/plan-limits";
 import { idParamSchema, inviteMemberSchema } from "@/types/schemas";
+import { serverTrack } from "@/lib/analytics-server";
 import { randomUUID } from "crypto";
 import { logger } from "@/lib/logger";
 
@@ -160,7 +161,8 @@ export async function POST(
       );
     }
 
-    // Generate invite link
+    void serverTrack(user.id, "invited_user", { org_id: orgId, role });
+
     const inviteLink = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/invite/${token}`;
 
     return NextResponse.json({

@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { verifyWebhookSignature } from "@/lib/razorpay";
 import { generateInvoice } from "@/lib/invoice";
 import { calculateGST } from "@/lib/gst";
+import { serverTrack } from "@/lib/analytics-server";
 import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
@@ -232,6 +233,13 @@ async function handlePaymentCaptured(
     gstBreakdown,
     gstNumber,
     billingState,
+  });
+
+  void serverTrack(orgId, "converted_to_paid", {
+    plan,
+    billing_cycle: billingCycle,
+    amount: payment.amount,
+    payment_id: payment.id,
   });
 }
 
