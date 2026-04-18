@@ -1,17 +1,29 @@
 # Claude Code Prompts — Phase-by-Phase
+
 # SocialBharat Build Sequence
+
 #
+
 # RULES:
+
 # 1. Run prompts in exact order. Never skip a phase.
+
 # 2. After each phase prompt completes, run the GATE CHECK before proceeding.
+
 # 3. After each gate passes, run the QA PROMPT before moving to next phase.
+
 # 4. If a gate fails, tell Claude Code to fix the failures — do NOT proceed.
 
 # ============================================================================
+
 # PHASE 0 — PROJECT SCAFFOLD
+
 # ============================================================================
+
 # Goal: Working Next.js project with all tooling, CI/CD, empty layouts, deploys to Vercel.
+
 # Time estimate: ~45 min
+
 # ============================================================================
 
 ## Prompt 0A — Scaffold & Dependencies
@@ -74,10 +86,15 @@ pnpm test          # should exit 0 (may have no tests yet — that's fine)
 ---
 
 # ============================================================================
+
 # PHASE 1 — AUTHENTICATION & MULTI-TENANCY
+
 # ============================================================================
+
 # Goal: Phone OTP, email/password, Google OAuth, orgs, teams, RBAC.
+
 # Time estimate: ~2-3 hours
+
 # ============================================================================
 
 ## Prompt 1A — Database & Auth Backend
@@ -174,10 +191,15 @@ pnpm type-check && pnpm test && pnpm lint && pnpm build
 ---
 
 # ============================================================================
+
 # PHASE 2 — SOCIAL ACCOUNTS & PUBLISHING
+
 # ============================================================================
+
 # Goal: Connect social profiles, compose posts, schedule, calendar, festivals, AI content.
+
 # Time estimate: ~3-4 hours
+
 # ============================================================================
 
 ## Prompt 2A — Social Connectors & Platform APIs
@@ -305,10 +327,15 @@ pnpm type-check && pnpm test && pnpm lint && pnpm build
 ---
 
 # ============================================================================
+
 # PHASE 3 — ENGAGEMENT HUB (UNIFIED INBOX)
+
 # ============================================================================
+
 # Goal: Unified inbox, webhooks, real-time messages, WhatsApp, smart replies.
+
 # Time estimate: ~2-3 hours
+
 # ============================================================================
 
 ## Prompt 3
@@ -384,10 +411,15 @@ pnpm type-check && pnpm test && pnpm lint && pnpm build
 ---
 
 # ============================================================================
+
 # PHASE 4 — BILLING & PAYMENTS
+
 # ============================================================================
+
 # Goal: Razorpay checkout, GST invoices, plan enforcement.
+
 # Time estimate: ~2 hours
+
 # ============================================================================
 
 ## Prompt 4
@@ -459,10 +491,15 @@ pnpm type-check && pnpm test && pnpm lint && pnpm build
 ---
 
 # ============================================================================
+
 # PHASE 5 — ANALYTICS & REPORTING
+
 # ============================================================================
+
 # Goal: Dashboards, metrics, custom reports, PDF export.
+
 # Time estimate: ~2 hours
+
 # ============================================================================
 
 ## Prompt 5
@@ -517,10 +554,15 @@ pnpm type-check && pnpm test && pnpm lint && pnpm build
 ---
 
 # ============================================================================
+
 # PHASE 6 — SOCIAL LISTENING & ADVANCED AI
+
 # ============================================================================
+
 # Goal: Brand monitoring, sentiment analysis, trending topics, crisis alerts.
+
 # Time estimate: ~1.5 hours
+
 # ============================================================================
 
 ## Prompt 6
@@ -569,10 +611,15 @@ pnpm type-check && pnpm test && pnpm lint && pnpm build
 ---
 
 # ============================================================================
+
 # PHASE 7 — UI POLISH, i18n, ERROR STATES
+
 # ============================================================================
+
 # Goal: Production-quality UI, Hindi translation, loading/error/empty states, E2E tests.
+
 # Time estimate: ~2 hours
+
 # ============================================================================
 
 ## Prompt 7
@@ -655,15 +702,20 @@ pnpm type-check && pnpm test && pnpm lint && pnpm build && pnpm e2e
 ---
 
 # ============================================================================
+
 # PHASE 8 — SECURITY AUDIT & PRODUCTION DEPLOY
+
 # ============================================================================
+
 # Goal: Security hardened, observability confirmed, production live.
+
 # Time estimate: ~1.5 hours
+
 # ============================================================================
 
 ## Prompt 8
 
-```
+````
 Read CLAUDE.md and specs/plan.md Phase 8. Read specs/tasks.md P8-01 through P8-14.
 
 Phase 7 is approved. Final phase: Security Audit & Production Deploy.
@@ -742,23 +794,13 @@ FINAL BUILD:
     - Confirmation that the build succeeds and is ready for vercel --prod
 
 Do NOT deploy. Report results for human review.
-```
+````
 
 ## Gate Check 8 (HUMAN REVIEW — MANDATORY)
 
 ```bash
 # Run full pipeline
 pnpm type-check && pnpm lint && pnpm test --coverage && pnpm build && pnpm e2e
-
-# Manual security checks:
-# [ ] Open incognito → /dashboard → redirects to /login
-# [ ] Register new user → can access dashboard
-# [ ] Create second user in different org → cannot see first user's data
-# [ ] grep -r 'SERVICE_ROLE\|SECRET\|sk_live\|rzp_live' .next/static/ → empty
-# [ ] All webhook endpoints verify signatures
-# [ ] Razorpay test checkout completes successfully
-# [ ] PostHog events appear in dashboard
-# [ ] Hindi UI is readable and complete
 
 # If all pass:
 vercel --prod
@@ -767,7 +809,9 @@ vercel --prod
 ---
 
 # ============================================================================
+
 # POST-PHASE: QA PIPELINE (run after each phase if using multi-agent)
+
 # ============================================================================
 
 ## QA Prompt (optional — run between phases for extra thoroughness)

@@ -4,29 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { t, getLocale } from "@/lib/i18n";
-import {
-  LayoutDashboard,
-  PenTool,
-  Inbox,
-  BarChart3,
-  Radio,
-  Image,
-  Sparkles,
-  Settings,
-  MessageCircle,
-} from "lucide-react";
-
-const navItems = [
-  { key: "nav.dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { key: "nav.publishing", href: "/publishing", icon: PenTool },
-  { key: "nav.inbox", href: "/inbox", icon: Inbox },
-  { key: "nav.analytics", href: "/analytics", icon: BarChart3 },
-  { key: "nav.listening", href: "/listening", icon: Radio },
-  { key: "nav.media", href: "/media", icon: Image },
-  { key: "nav.whatsapp", href: "/whatsapp", icon: MessageCircle },
-  { key: "nav.ai_studio", href: "/dashboard/ai-studio", icon: Sparkles },
-  { key: "nav.settings", href: "/settings", icon: Settings },
-];
+import { SIDEBAR_NAV_ITEMS } from "./nav-items";
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -46,7 +24,7 @@ export function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        {navItems.map((item) => {
+        {SIDEBAR_NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const name = t(item.key, locale);
           const isActive =

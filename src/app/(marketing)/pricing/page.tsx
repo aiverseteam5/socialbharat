@@ -223,7 +223,11 @@ export default function PricingPage() {
                 </ul>
 
                 <Link
-                  href={plan.id === "free" ? "/register" : "/register"}
+                  href={
+                    plan.id === "free"
+                      ? "/register"
+                      : `/register?plan=${plan.id}`
+                  }
                   className="w-full"
                 >
                   <Button
@@ -247,7 +251,11 @@ export default function PricingPage() {
           <p className="text-muted-foreground mb-6">
             Contact us for enterprise pricing and custom solutions
           </p>
-          <Button variant="outline">Contact Sales</Button>
+          <Button asChild variant="outline">
+            <a href="mailto:sales@socialbharat.in?subject=Enterprise%20plan%20enquiry">
+              Contact Sales
+            </a>
+          </Button>
         </div>
 
         <div className="mt-16 text-center text-sm text-muted-foreground">

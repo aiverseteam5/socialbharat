@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2, FileText } from "lucide-react";
@@ -83,8 +84,15 @@ export default function DraftsPage() {
                   </p>
                 </div>
                 <div className="flex gap-2 shrink-0">
-                  <Button size="sm" variant="outline" aria-label="Edit draft">
-                    <Edit className="w-4 h-4" />
+                  <Button
+                    asChild
+                    size="sm"
+                    variant="outline"
+                    aria-label="Edit draft"
+                  >
+                    <Link href={`/publishing/compose?draftId=${draft.id}`}>
+                      <Edit className="w-4 h-4" />
+                    </Link>
                   </Button>
                   <Button
                     size="sm"

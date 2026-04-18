@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2, CheckCircle, XCircle } from "lucide-react";
@@ -140,8 +141,8 @@ export default function SocialAccountsPage() {
           WhatsApp requires manual setup with your phone number ID and access
           token.
         </p>
-        <Button size="sm" variant="outline">
-          Setup WhatsApp
+        <Button asChild size="sm" variant="outline">
+          <Link href="/whatsapp">Setup WhatsApp</Link>
         </Button>
       </Card>
     </div>

@@ -45,6 +45,17 @@ export default function BillingSettingsPage() {
   useEffect(() => {
     fetchSubscription();
     fetchInvoices();
+
+    const intended = localStorage.getItem("intendedPlan");
+    if (
+      intended === "starter" ||
+      intended === "pro" ||
+      intended === "business"
+    ) {
+      setSelectedPlan(intended);
+      setShowCheckout(true);
+      localStorage.removeItem("intendedPlan");
+    }
   }, []);
 
   async function fetchSubscription() {
@@ -305,8 +316,15 @@ export default function BillingSettingsPage() {
                     )}
                   </div>
                   {invoice.pdf_url && (
-                    <Button variant="ghost" size="sm">
-                      <Download className="h-4 w-4" />
+                    <Button asChild variant="ghost" size="sm">
+                      <a
+                        href={invoice.pdf_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`Download invoice ${invoice.invoice_number}`}
+                      >
+                        <Download className="h-4 w-4" />
+                      </a>
                     </Button>
                   )}
                 </div>
