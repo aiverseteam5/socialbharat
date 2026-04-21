@@ -1,20 +1,20 @@
 import { Resend } from "resend";
+import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 
 /**
  * Thin Resend wrapper. Instantiated lazily so missing env vars only fail
  * at send-time, letting the app boot in dev/test without the key set.
  */
-let client: Resend | null = null;
+let client: Resend | null = null; // lazy singleton
 
-function getClient(): Resend | null {
-  if (!process.env.RESEND_API_KEY) return null;
-  if (!client) client = new Resend(process.env.RESEND_API_KEY);
+function getClient(): Resend {
+  if (!client) client = new Resend(env.RESEND_API_KEY);
   return client;
 }
 
 const FROM_ADDRESS =
-  process.env.RESEND_FROM_EMAIL ?? "SocialBharat <no-reply@socialbharat.app>";
+  env.RESEND_FROM_EMAIL ?? "SocialBharat <no-reply@socialbharat.app>";
 
 export interface InvitationEmailInput {
   to: string;
@@ -28,13 +28,6 @@ export async function sendInvitationEmail(
   input: InvitationEmailInput,
 ): Promise<{ sent: boolean; error?: string }> {
   const resend = getClient();
-  if (!resend) {
-    logger.warn("Resend API key not configured; skipping invitation email", {
-      to: input.to,
-    });
-    return { sent: false, error: "email_not_configured" };
-  }
-
   const { to, orgName, inviterName, inviteLink, role } = input;
   const subject = `${inviterName} invited you to ${orgName} on SocialBharat`;
   const html = `
@@ -83,7 +76,6 @@ export async function sendNotificationEmail(
   input: NotificationEmailInput,
 ): Promise<{ sent: boolean; error?: string }> {
   const resend = getClient();
-  if (!resend) return { sent: false, error: "email_not_configured" };
 
   const { to, title, body, link } = input;
   const linkHtml = link

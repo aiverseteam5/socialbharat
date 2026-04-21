@@ -45,6 +45,29 @@ export async function POST(request: NextRequest) {
       ? `${slug}-${Math.random().toString(36).substring(2, 8)}`
       : slug;
 
+    // Guarantee a users row exists before any FK-constrained insert.
+    // This covers Google OAuth sign-ups and cases where the register
+    // route's upsert ran before the DB trigger could fire.
+    await serviceClient.from("users").upsert(
+      {
+        id: user.id,
+        email: user.email ?? null,
+        phone: user.phone ?? null,
+        full_name:
+          user.user_metadata?.full_name ?? user.user_metadata?.name ?? null,
+        avatar_url: user.user_metadata?.avatar_url ?? null,
+        account_type: "team",
+        preferred_language: preferred_language || "en",
+        notification_preferences: {
+          in_app: true,
+          email: true,
+          whatsapp: false,
+          sms: false,
+        },
+      },
+      { onConflict: "id", ignoreDuplicates: false },
+    );
+
     const { data: org, error: orgError } = await serviceClient
       .from("organizations")
       .insert({

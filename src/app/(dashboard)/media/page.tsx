@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Upload, FolderOpen } from "lucide-react";
@@ -16,6 +16,7 @@ interface MediaAsset {
 export default function MediaPage() {
   const [mediaAssets, setMediaAssets] = useState<MediaAsset[]>([]);
   const [loading, setLoading] = useState(true);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchMediaAssets();
@@ -66,18 +67,16 @@ export default function MediaPage() {
         </div>
         <div>
           <input
+            ref={fileInputRef}
             type="file"
             accept="image/*,video/*"
             onChange={handleUpload}
             className="hidden"
-            id="file-upload"
           />
-          <label htmlFor="file-upload">
-            <Button>
-              <Upload className="w-4 h-4 mr-2" />
-              Upload
-            </Button>
-          </label>
+          <Button onClick={() => fileInputRef.current?.click()}>
+            <Upload className="w-4 h-4 mr-2" />
+            Upload
+          </Button>
         </div>
       </div>
 

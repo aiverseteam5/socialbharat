@@ -32,5 +32,8 @@ export function t(key: string, locale: string = "en"): string {
 }
 
 export function getLocale(): string {
-  return "en";
+  if (typeof window === "undefined") return "en";
+  const stored = localStorage.getItem("sb_locale");
+  const valid = SUPPORTED_LOCALES.map((l) => l.code);
+  return stored && valid.includes(stored as SupportedLocale) ? stored : "en";
 }

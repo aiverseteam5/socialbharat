@@ -5,13 +5,28 @@ import { PenTool, Share2, BarChart3 } from "lucide-react";
 import { t, getLocale } from "@/lib/i18n";
 import { UpcomingFestivalsWidget } from "@/components/publishing/UpcomingFestivalsWidget";
 import { DevUpgradeModalTrigger } from "@/components/billing/DevUpgradeModalTrigger";
+import { OnboardingBanner } from "@/components/dashboard/OnboardingBanner";
+import { requireAuth } from "@/lib/auth";
+import { createServiceClient } from "@/lib/supabase/service";
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
   const locale = getLocale();
   const isDev = process.env.NODE_ENV === "development";
 
+  const user = await requireAuth();
+  const svc = createServiceClient();
+  const { data: profile } = await svc
+    .from("users")
+    .select("account_type")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const accountType = profile?.account_type ?? "individual";
+
   return (
     <div className="space-y-6">
+      <OnboardingBanner accountType={accountType} />
+
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">

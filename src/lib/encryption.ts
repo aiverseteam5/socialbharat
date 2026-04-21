@@ -1,21 +1,22 @@
-import crypto from 'crypto'
+import crypto from "crypto";
+import { env } from "@/lib/env";
 
 /**
  * AES-256-GCM encryption/decryption for storing sensitive data (access tokens)
- * Uses a key from ENCRYPTION_KEY environment variable
+ * Uses ENCRYPTION_KEY from validated env schema.
  */
 
-const ALGORITHM = 'aes-256-gcm'
-const IV_LENGTH = 16
-const SALT_LENGTH = 16
-const TAG_LENGTH = 16
-const KEY_LENGTH = 32
+const ALGORITHM = "aes-256-gcm";
+const IV_LENGTH = 16;
+const SALT_LENGTH = 16;
+const TAG_LENGTH = 16;
+const KEY_LENGTH = 32;
 
 /**
  * Derive a key from the encryption key and salt using PBKDF2
  */
 function deriveKey(encryptionKey: string, salt: Buffer): Buffer {
-  return crypto.pbkdf2Sync(encryptionKey, salt, 100000, KEY_LENGTH, 'sha256')
+  return crypto.pbkdf2Sync(encryptionKey, salt, 100000, KEY_LENGTH, "sha256");
 }
 
 /**
@@ -24,23 +25,25 @@ function deriveKey(encryptionKey: string, salt: Buffer): Buffer {
  * @returns Base64-encoded string containing IV, salt, ciphertext, and auth tag
  */
 export function encrypt(plaintext: string): string {
-  const encryptionKey = process.env.ENCRYPTION_KEY
-  if (!encryptionKey) {
-    throw new Error('ENCRYPTION_KEY environment variable is not set')
-  }
+  const encryptionKey = env.ENCRYPTION_KEY;
 
-  const iv = crypto.randomBytes(IV_LENGTH)
-  const salt = crypto.randomBytes(SALT_LENGTH)
-  const key = deriveKey(encryptionKey, salt)
+  const iv = crypto.randomBytes(IV_LENGTH);
+  const salt = crypto.randomBytes(SALT_LENGTH);
+  const key = deriveKey(encryptionKey, salt);
 
-  const cipher = crypto.createCipheriv(ALGORITHM, key, iv)
-  let ciphertext = cipher.update(plaintext, 'utf8', 'binary')
-  ciphertext += cipher.final('binary')
-  const authTag = cipher.getAuthTag()
+  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
+  let ciphertext = cipher.update(plaintext, "utf8", "binary");
+  ciphertext += cipher.final("binary");
+  const authTag = cipher.getAuthTag();
 
   // Combine: salt + iv + authTag + ciphertext
-  const combined = Buffer.concat([salt, iv, authTag, Buffer.from(ciphertext, 'binary')])
-  return combined.toString('base64')
+  const combined = Buffer.concat([
+    salt,
+    iv,
+    authTag,
+    Buffer.from(ciphertext, "binary"),
+  ]);
+  return combined.toString("base64");
 }
 
 /**
@@ -49,28 +52,28 @@ export function encrypt(plaintext: string): string {
  * @returns Decrypted plaintext
  */
 export function decrypt(ciphertext: string): string {
-  const encryptionKey = process.env.ENCRYPTION_KEY
-  if (!encryptionKey) {
-    throw new Error('ENCRYPTION_KEY environment variable is not set')
-  }
+  const encryptionKey = env.ENCRYPTION_KEY;
 
-  const combined = Buffer.from(ciphertext, 'base64')
+  const combined = Buffer.from(ciphertext, "base64");
 
   // Extract components
-  const salt = combined.subarray(0, SALT_LENGTH)
-  const iv = combined.subarray(SALT_LENGTH, SALT_LENGTH + IV_LENGTH)
-  const authTag = combined.subarray(SALT_LENGTH + IV_LENGTH, SALT_LENGTH + IV_LENGTH + TAG_LENGTH)
-  const encrypted = combined.subarray(SALT_LENGTH + IV_LENGTH + TAG_LENGTH)
+  const salt = combined.subarray(0, SALT_LENGTH);
+  const iv = combined.subarray(SALT_LENGTH, SALT_LENGTH + IV_LENGTH);
+  const authTag = combined.subarray(
+    SALT_LENGTH + IV_LENGTH,
+    SALT_LENGTH + IV_LENGTH + TAG_LENGTH,
+  );
+  const encrypted = combined.subarray(SALT_LENGTH + IV_LENGTH + TAG_LENGTH);
 
-  const key = deriveKey(encryptionKey, salt)
+  const key = deriveKey(encryptionKey, salt);
 
-  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv)
-  decipher.setAuthTag(authTag)
+  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+  decipher.setAuthTag(authTag);
 
   const plaintext = Buffer.concat([
     decipher.update(encrypted),
     decipher.final(),
-  ]).toString('utf8')
+  ]).toString("utf8");
 
-  return plaintext
+  return plaintext;
 }

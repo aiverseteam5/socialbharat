@@ -1,4 +1,5 @@
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { env } from "@/lib/env";
 
 /**
  * Service-role Supabase client for server-side background jobs (cron, webhooks).
@@ -6,8 +7,8 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js";
  */
 export function createServiceClient() {
   return createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    env.NEXT_PUBLIC_SUPABASE_URL,
+    env.SUPABASE_SERVICE_ROLE_KEY,
     {
       auth: {
         persistSession: false,

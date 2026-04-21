@@ -1,5 +1,6 @@
 import Razorpay from "razorpay";
 import crypto from "crypto";
+import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 
 /**
@@ -8,8 +9,8 @@ import { logger } from "@/lib/logger";
  */
 
 const razorpayInstance = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID!,
-  key_secret: process.env.RAZORPAY_KEY_SECRET!,
+  key_id: env.RAZORPAY_KEY_ID,
+  key_secret: env.RAZORPAY_KEY_SECRET,
 });
 
 export interface CreateOrderParams {
@@ -73,7 +74,7 @@ export function verifyPaymentSignature(
   signature: string,
 ): boolean {
   const generatedSignature = crypto
-    .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
+    .createHmac("sha256", env.RAZORPAY_KEY_SECRET)
     .update(`${orderId}|${paymentId}`)
     .digest("hex");
 

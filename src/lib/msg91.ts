@@ -1,6 +1,4 @@
-// MSG91 OTP helper
-// Send and verify OTP via MSG91 REST API
-
+import { env } from "./env";
 import { logger } from "./logger";
 
 interface SendOtpResponse {
@@ -16,8 +14,6 @@ interface VerifyOtpResponse {
   };
 }
 
-const MOCK_OTP = "123456";
-
 /**
  * Send OTP to a phone number via MSG91
  * @param phone - Phone number in format +91XXXXXXXXXX
@@ -26,19 +22,8 @@ const MOCK_OTP = "123456";
 export async function sendOtp(
   phone: string,
 ): Promise<{ message: string; expiresIn: number }> {
-  const authKey = process.env.MSG91_AUTH_KEY;
-  const templateId = process.env.MSG91_TEMPLATE_ID;
-
-  // If MSG91 auth key is not set, use mock OTP for development
-  if (!authKey) {
-    logger.warn("MSG91_AUTH_KEY not set; using mock OTP for development", {
-      mockOtp: MOCK_OTP,
-    });
-    return {
-      message: "OTP sent (development mode)",
-      expiresIn: 300,
-    };
-  }
+  const authKey = env.MSG91_AUTH_KEY;
+  const templateId = env.MSG91_TEMPLATE_ID;
 
   try {
     const response = await fetch("https://api.msg91.com/api/v5/otp/send", {
@@ -80,23 +65,7 @@ export async function verifyOtp(
   phone: string,
   otp: string,
 ): Promise<{ valid: boolean; message: string }> {
-  const authKey = process.env.MSG91_AUTH_KEY;
-
-  // If MSG91 auth key is not set, use mock OTP for development
-  if (!authKey) {
-    logger.warn("MSG91_AUTH_KEY not set; using mock OTP verification");
-    if (otp === MOCK_OTP) {
-      return {
-        valid: true,
-        message: "OTP verified successfully (development mode)",
-      };
-    } else {
-      return {
-        valid: false,
-        message: "Invalid OTP",
-      };
-    }
-  }
+  const authKey = env.MSG91_AUTH_KEY;
 
   try {
     const response = await fetch("https://api.msg91.com/api/v5/otp/verify", {
