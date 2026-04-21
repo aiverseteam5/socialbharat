@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { requireAuth } from "@/lib/auth";
 import { createOrgSchema } from "@/types/schemas";
 import { logger } from "@/lib/logger";
@@ -24,31 +24,28 @@ export async function POST(request: NextRequest) {
     const { name, industry, team_size, preferred_language } =
       validationResult.data;
 
-    const supabase = await createClient();
+    // Bootstrap a new org requires elevated privileges: a brand-new user isn't
+    // yet a member of any org, so user-scoped RLS blocks both the slug-conflict
+    // SELECT and the owner-membership INSERT. Safe to use the service client
+    // here because requireAuth() above verified the user.
+    const serviceClient = createServiceClient();
 
-    // Generate slug from name
     const slug = name
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "");
 
-    // Check if slug already exists
-    const { data: existingOrg } = await supabase
+    const { data: existingOrg } = await serviceClient
       .from("organizations")
       .select("id")
       .eq("slug", slug)
-      .single();
+      .maybeSingle();
 
-    let finalSlug = slug;
+    const finalSlug = existingOrg
+      ? `${slug}-${Math.random().toString(36).substring(2, 8)}`
+      : slug;
 
-    if (existingOrg) {
-      // Append random suffix to make unique
-      const randomSuffix = Math.random().toString(36).substring(2, 8);
-      finalSlug = `${slug}-${randomSuffix}`;
-    }
-
-    // Create organization
-    const { data: org, error: orgError } = await supabase
+    const { data: org, error: orgError } = await serviceClient
       .from("organizations")
       .insert({
         name,
@@ -72,14 +69,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Add creator as owner
-    const { error: memberError } = await supabase.from("org_members").insert({
-      org_id: org.id,
-      user_id: user.id,
-      role: "owner",
-      invited_by: user.id,
-      accepted_at: new Date().toISOString(),
-    });
+    const { error: memberError } = await serviceClient
+      .from("org_members")
+      .insert({
+        org_id: org.id,
+        user_id: user.id,
+        role: "owner",
+        invited_by: user.id,
+        accepted_at: new Date().toISOString(),
+      });
 
     if (memberError) {
       logger.error("Owner membership insert failed", memberError, {
