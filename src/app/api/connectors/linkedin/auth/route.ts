@@ -24,12 +24,11 @@ export async function GET() {
   const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/connectors/linkedin/callback`;
   const state = await issueState("linkedin");
 
-  const scopes = [
-    "r_liteprofile",
-    "w_member_social",
-    "r_organization_admin",
-    "w_organization_social",
-  ];
+  // LinkedIn OpenID Connect scopes (replaces deprecated v1 profile scopes).
+  // Organization-level posting (w_organization_social / r_organization_social)
+  // requires LinkedIn Marketing Developer Platform approval — handled separately
+  // once the app is approved.
+  const scopes = ["openid", "profile", "email", "w_member_social"];
 
   const authUrl = new URL("https://www.linkedin.com/oauth/v2/authorization");
   authUrl.searchParams.set("response_type", "code");

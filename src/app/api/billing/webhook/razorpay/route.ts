@@ -4,6 +4,7 @@ import { verifyWebhookSignature } from "@/lib/razorpay";
 import { generateInvoice } from "@/lib/invoice";
 import { calculateGST } from "@/lib/gst";
 import { serverTrack } from "@/lib/analytics-server";
+import { sendNotificationVoid } from "@/lib/notifications/send";
 import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
@@ -241,6 +242,26 @@ async function handlePaymentCaptured(
     amount: payment.amount,
     payment_id: payment.id,
   });
+
+  // Notify org owner
+  const { data: owner } = await supabase
+    .from("org_members")
+    .select("user_id")
+    .eq("org_id", orgId)
+    .eq("role", "owner")
+    .limit(1)
+    .single();
+
+  if (owner) {
+    sendNotificationVoid({
+      userId: owner.user_id,
+      orgId,
+      type: "payment_received",
+      title: "Payment received",
+      body: `₹${(payment.amount / 100).toFixed(2)} received. Your ${plan ?? "plan"} is now active.`,
+      link: "/settings/billing",
+    });
+  }
 }
 
 async function handleSubscriptionActivated(

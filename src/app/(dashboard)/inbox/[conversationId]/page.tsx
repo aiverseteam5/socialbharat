@@ -22,6 +22,7 @@ export default function InboxConversationPage() {
     messages,
     filters,
     isLoading,
+    realtimeStatus,
     selectConversation,
     setFilters,
     sendReply,
@@ -94,6 +95,7 @@ export default function InboxConversationPage() {
           selectedId={selectedConversationId}
           filters={filters}
           isLoading={isLoading}
+          realtimeStatus={realtimeStatus}
           onSelect={selectConversation}
           onFilterChange={setFilters}
         />

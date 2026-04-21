@@ -69,7 +69,9 @@ export async function GET(request: NextRequest) {
 
     const accessToken = tokenData.access_token;
 
-    // Get user info
+    // Fetch the authenticated member's profile via OIDC userinfo.
+    // `sub` is the member's person URN id (e.g. "abc123") — use this for posting
+    // via author="urn:li:person:<sub>".
     const userUrl = "https://api.linkedin.com/v2/userinfo";
     const userResponse = await fetch(userUrl, {
       headers: {
@@ -79,19 +81,10 @@ export async function GET(request: NextRequest) {
 
     const userData = await userResponse.json();
 
-    // Get user's organizations
-    const orgsUrl =
-      "https://api.linkedin.com/v2/organizationAcls?q=roleAssignee&role=ADMINISTRATOR";
-    const orgsResponse = await fetch(orgsUrl, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "X-Restli-Protocol-Version": "2.0.0",
-      },
-    });
+    if (userData.serviceErrorCode || userData.status >= 400) {
+      throw new Error(userData.message || "Failed to fetch LinkedIn profile");
+    }
 
-    const orgsData = await orgsResponse.json();
-
-    // Get user's organization
     const { data: orgMember } = await supabase
       .from("org_members")
       .select("org_id")
@@ -104,49 +97,28 @@ export async function GET(request: NextRequest) {
     }
 
     const orgId = orgMember.org_id;
-    const encryptedToken = encrypt(accessToken);
-    const personUrn = userData.sub;
 
-    // Store each organization as a connected profile
-    const organizations = orgsData.elements || [];
-    for (const org of organizations) {
-      const organizationUrn = org.organization;
-
-      // Fetch organization details
-      const orgDetailsUrl = `https://api.linkedin.com/v2/organizations?ids=${organizationUrn}`;
-      const orgDetailsResponse = await fetch(orgDetailsUrl, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "X-Restli-Protocol-Version": "2.0.0",
-        },
-      });
-
-      const orgDetailsData = await orgDetailsResponse.json();
-      const orgDetails = orgDetailsData.results?.[organizationUrn];
-
-      const profileLimit = await checkNumericLimit(
-        orgId,
-        "max_social_profiles",
-      );
-      if (!profileLimit.allowed) {
-        redirect(
-          "/dashboard/settings/social-accounts?error=plan_limit_reached",
-        );
-      }
-
-      await supabase.from("social_profiles").upsert({
-        org_id: orgId,
-        platform: "linkedin",
-        platform_user_id: organizationUrn,
-        platform_username: orgDetails?.name || organizationUrn,
-        access_token_encrypted: encryptedToken,
-        metadata: {
-          person_urn: personUrn,
-          organization_urn: organizationUrn,
-          logo_url: orgDetails?.logoV2?.original?.url,
-        },
-      });
+    const profileLimit = await checkNumericLimit(orgId, "max_social_profiles");
+    if (!profileLimit.allowed) {
+      redirect("/dashboard/settings/social-accounts?error=plan_limit_reached");
     }
+
+    const encryptedToken = encrypt(accessToken);
+    const personUrn = `urn:li:person:${userData.sub}`;
+
+    await supabase.from("social_profiles").upsert({
+      org_id: orgId,
+      platform: "linkedin",
+      platform_user_id: userData.sub,
+      platform_username: userData.name || userData.email || userData.sub,
+      access_token_encrypted: encryptedToken,
+      metadata: {
+        person_urn: personUrn,
+        email: userData.email,
+        picture: userData.picture,
+        locale: userData.locale,
+      },
+    });
 
     redirect("/dashboard/settings/social-accounts?success=linkedin_connected");
   } catch (error) {

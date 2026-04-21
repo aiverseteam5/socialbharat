@@ -40,8 +40,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Exchange code for access token
-    const clientId = process.env.YOUTUBE_API_KEY;
-    const clientSecret = process.env.YOUTUBE_API_SECRET;
+    const clientId = process.env.YOUTUBE_CLIENT_ID;
+    const clientSecret = process.env.YOUTUBE_CLIENT_SECRET;
     const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/connectors/youtube/callback`;
 
     const tokenUrl = "https://oauth2.googleapis.com/token";

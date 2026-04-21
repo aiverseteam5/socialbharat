@@ -1,7 +1,16 @@
+import { MarketingNavbar } from "@/components/marketing/Navbar";
+import { MarketingFooter } from "@/components/marketing/Footer";
+
 export default function MarketingLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
-  return <>{children}</>
+  return (
+    <div className="min-h-screen bg-white">
+      <MarketingNavbar />
+      <main>{children}</main>
+      <MarketingFooter />
+    </div>
+  );
 }

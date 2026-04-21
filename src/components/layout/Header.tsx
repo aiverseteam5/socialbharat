@@ -17,6 +17,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
 import { useAuthStore } from "@/stores/auth-store";
 import { LanguageSwitcher } from "@/components/common/LanguageSwitcher";
+import { NotificationBell } from "@/components/layout/NotificationBell";
 import { t, getLocale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { SIDEBAR_NAV_ITEMS } from "./nav-items";
@@ -94,9 +95,10 @@ export function Header() {
         {/* Breadcrumb placeholder — left empty; page titles render within <main> */}
       </div>
 
-      {/* Right: language, user */}
+      {/* Right: language, notifications, user */}
       <div className="flex items-center gap-1">
         <LanguageSwitcher />
+        <NotificationBell />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

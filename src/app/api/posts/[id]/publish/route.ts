@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { decrypt } from "@/lib/encryption";
 import { getPlatformConnector } from "@/lib/platforms";
 import { serverTrack } from "@/lib/analytics-server";
+import { sendNotificationVoid } from "@/lib/notifications/send";
 import { NextRequest, NextResponse } from "next/server";
 
 /**
@@ -159,6 +160,28 @@ export async function POST(
         action: "published_post",
         platforms: profiles.map((p) => p.platform),
         success_count: successCount,
+      });
+      sendNotificationVoid({
+        userId: user.id,
+        orgId: orgId,
+        type: overallStatus === "failed" ? "post_failed" : "post_published",
+        title:
+          overallStatus === "failed"
+            ? "Post failed to publish"
+            : overallStatus === "partially_failed"
+              ? "Post partially published"
+              : "Post published successfully",
+        body: `Published to ${successCount} of ${profiles.length} platform(s).`,
+        link: `/publishing`,
+      });
+    } else {
+      sendNotificationVoid({
+        userId: user.id,
+        orgId: orgId,
+        type: "post_failed",
+        title: "Post failed to publish",
+        body: "Your post could not be published to any platform.",
+        link: `/publishing`,
       });
     }
 

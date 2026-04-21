@@ -20,14 +20,11 @@ export async function GET() {
       { status: 429 },
     );
   }
-  const clientId = process.env.YOUTUBE_API_KEY;
+  const clientId = process.env.YOUTUBE_CLIENT_ID;
   const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/connectors/youtube/callback`;
   const state = await issueState("youtube");
 
-  const scopes = [
-    "https://www.googleapis.com/auth/youtube.upload",
-    "https://www.googleapis.com/auth/youtube.readonly",
-  ];
+  const scopes = ["https://www.googleapis.com/auth/youtube.force-ssl"];
 
   const authUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
   authUrl.searchParams.set("response_type", "code");
