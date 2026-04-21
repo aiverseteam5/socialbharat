@@ -1,224 +1,336 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+const UPCOMING_FESTIVALS = [
+  {
+    name: "Akshaya Tritiya",
+    date: "Apr 30",
+    emoji: "🪔",
+    tip: "Gold & jewellery brands see 5× engagement today",
+  },
+  {
+    name: "Eid ul-Fitr",
+    date: "Mar 30",
+    emoji: "🌙",
+    tip: "Schedule greetings 24 hrs ahead for max reach",
+  },
+  {
+    name: "Buddha Purnima",
+    date: "May 12",
+    emoji: "☸️",
+    tip: "Mindfulness & wellness content performs well",
+  },
+  {
+    name: "Ganga Dussehra",
+    date: "Jun 5",
+    emoji: "🏔️",
+    tip: "Travel & spirituality posts trend heavily",
+  },
+];
+
+function FestivalPanel() {
+  return (
+    <div className="hidden lg:flex flex-col justify-between h-full bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-8 text-white">
+      <div>
+        <h1 className="text-3xl font-bold mb-1">
+          Social<span className="text-orange-100">Bharat</span> 🇮🇳
+        </h1>
+        <p className="text-orange-100 text-sm">
+          India&apos;s AI-powered social media platform
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        <h2 className="font-semibold text-lg">Upcoming Festivals</h2>
+        {UPCOMING_FESTIVALS.map((f) => (
+          <div key={f.name} className="bg-white/15 rounded-xl p-4 space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">{f.emoji}</span>
+              <div>
+                <p className="font-semibold text-sm">{f.name}</p>
+                <p className="text-xs text-orange-100">{f.date}</p>
+              </div>
+            </div>
+            <p className="text-xs text-orange-50 leading-relaxed">{f.tip}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="bg-white/10 rounded-xl p-4">
+        <p className="text-sm font-medium">🚀 Join 10,000+ Indian brands</p>
+        <p className="text-xs text-orange-100 mt-1">
+          scheduling smarter with SocialBharat
+        </p>
+      </div>
+    </div>
+  );
+}
 
 export default function LoginPage() {
-  const router = useRouter()
-  const [phone, setPhone] = useState('')
-  const [otpSent, setOtpSent] = useState(false)
-  const [otp, setOtp] = useState(['', '', '', '', '', ''])
-  const [countdown, setCountdown] = useState(300)
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const router = useRouter();
+  const [phone, setPhone] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [countdown, setCountdown] = useState(300);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSendOtp = async () => {
-    setLoading(true)
-    setError('')
+    setLoading(true);
+    setError("");
     try {
-      const response = await fetch('/api/auth/otp/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/auth/otp/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone }),
-      })
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.error || 'Failed to send OTP')
-      setOtpSent(true)
-      setCountdown(300)
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed to send OTP");
+      setOtpSent(true);
+      setCountdown(300);
       const timer = setInterval(() => {
         setCountdown((prev) => {
           if (prev <= 1) {
-            clearInterval(timer)
-            return 0
+            clearInterval(timer);
+            return 0;
           }
-          return prev - 1
-        })
-      }, 1000)
+          return prev - 1;
+        });
+      }, 1000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send OTP')
+      setError(err instanceof Error ? err.message : "Failed to send OTP");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleVerifyOtp = async () => {
-    setLoading(true)
-    setError('')
+    setLoading(true);
+    setError("");
     try {
-      const response = await fetch('/api/auth/otp/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, otp: otp.join('') }),
-      })
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.error || 'Failed to verify OTP')
-      if (data.isNewUser) {
-        router.push('/onboarding')
-      } else {
-        router.push('/dashboard')
-      }
+      const response = await fetch("/api/auth/otp/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone, otp: otp.join("") }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed to verify OTP");
+      router.push(data.isNewUser ? "/onboarding" : "/dashboard");
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to verify OTP')
+      setError(err instanceof Error ? err.message : "Failed to verify OTP");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleEmailLogin = async () => {
-    setLoading(true)
-    setError('')
+    setLoading(true);
+    setError("");
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
-      })
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.error || 'Login failed')
-      router.push('/dashboard')
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Login failed");
+      router.push("/dashboard");
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed')
+      setError(err instanceof Error ? err.message : "Login failed");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleGoogleLogin = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const { createClient } = await import('@/lib/supabase/client')
-      const supabase = createClient()
-      await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/auth/callback` } })
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: `${window.location.origin}/auth/callback` },
+      });
     } catch {
-      setError('Google login failed')
-      setLoading(false)
+      setError("Google login failed");
+      setLoading(false);
     }
-  }
+  };
 
   const handleOtpChange = (index: number, value: string) => {
-    if (value.length > 1) return
-    const newOtp = [...otp]
-    newOtp[index] = value
-    setOtp(newOtp)
+    if (value.length > 1) return;
+    const newOtp = [...otp];
+    newOtp[index] = value;
+    setOtp(newOtp);
     if (value && index < 5) {
-      const nextInput = document.getElementById(`otp-${index + 1}`) as HTMLInputElement
-      nextInput?.focus()
+      const next = document.getElementById(
+        `otp-${index + 1}`,
+      ) as HTMLInputElement;
+      next?.focus();
     }
-  }
+  };
 
   const formatCountdown = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins}:${secs.toString().padStart(2, '0')}`
-  }
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Sign In</CardTitle>
-          <CardDescription>Choose your sign-in method</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="phone" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="phone">Phone OTP</TabsTrigger>
-              <TabsTrigger value="email">Email</TabsTrigger>
-            </TabsList>
-            <TabsContent value="phone" className="space-y-4 mt-4">
-              {!otpSent ? (
+    <div className="max-w-4xl mx-auto grid lg:grid-cols-2 gap-6 items-stretch">
+      <FestivalPanel />
+
+      <div className="flex flex-col justify-center">
+        <div className="mb-6 text-center lg:text-left">
+          <h1 className="text-2xl font-bold lg:hidden">
+            <span className="text-slate-800">Social</span>
+            <span style={{ color: "#FF6B35" }}>Bharat</span>
+            <span aria-hidden className="ml-1">
+              🇮🇳
+            </span>
+          </h1>
+          <p className="text-sm text-slate-500 lg:hidden mt-1">
+            India&apos;s Social Media Platform
+          </p>
+        </div>
+
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle>Sign In</CardTitle>
+            <CardDescription>Choose your sign-in method</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="phone" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="phone">Phone OTP</TabsTrigger>
+                <TabsTrigger value="email">Email</TabsTrigger>
+              </TabsList>
+              <TabsContent value="phone" className="space-y-4 mt-4">
+                {!otpSent ? (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone Number</Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        placeholder="+91XXXXXXXXXX"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                      />
+                    </div>
+                    <Button
+                      onClick={handleSendOtp}
+                      disabled={loading}
+                      className="w-full"
+                    >
+                      {loading ? "Sending..." : "Send OTP"}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Enter OTP</Label>
+                      <div className="flex gap-2">
+                        {otp.map((digit, index) => (
+                          <Input
+                            key={index}
+                            id={`otp-${index}`}
+                            type="text"
+                            maxLength={1}
+                            value={digit}
+                            onChange={(e) =>
+                              handleOtpChange(index, e.target.value)
+                            }
+                            className="w-10 h-10 text-center text-lg"
+                          />
+                        ))}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Expires in {formatCountdown(countdown)}
+                      </p>
+                    </div>
+                    <Button
+                      onClick={handleVerifyOtp}
+                      disabled={loading}
+                      className="w-full"
+                    >
+                      {loading ? "Verifying..." : "Verify OTP"}
+                    </Button>
+                    <Button
+                      variant="link"
+                      onClick={() => setOtpSent(false)}
+                      className="w-full"
+                    >
+                      Change phone number
+                    </Button>
+                  </div>
+                )}
+              </TabsContent>
+              <TabsContent value="email" className="space-y-4 mt-4">
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number</Label>
+                    <Label htmlFor="email">Email</Label>
                     <Input
-                      id="phone"
-                      type="tel"
-                      placeholder="+91XXXXXXXXXX"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
+                      id="email"
+                      type="email"
+                      placeholder="m@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                     />
                   </div>
-                  <Button onClick={handleSendOtp} disabled={loading} className="w-full">
-                    {loading ? 'Sending...' : 'Send OTP'}
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label>Enter OTP</Label>
-                    <div className="flex gap-2">
-                      {otp.map((digit, index) => (
-                        <Input
-                          key={index}
-                          id={`otp-${index}`}
-                          type="text"
-                          maxLength={1}
-                          value={digit}
-                          onChange={(e) => handleOtpChange(index, e.target.value)}
-                          className="w-10 h-10 text-center text-lg"
-                        />
-                      ))}
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Expires in {formatCountdown(countdown)}
-                    </p>
+                    <Label htmlFor="password">Password</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
                   </div>
-                  <Button onClick={handleVerifyOtp} disabled={loading} className="w-full">
-                    {loading ? 'Verifying...' : 'Verify OTP'}
+                  <Button
+                    onClick={handleEmailLogin}
+                    disabled={loading}
+                    className="w-full"
+                  >
+                    {loading ? "Signing in..." : "Sign In"}
                   </Button>
-                  <Button variant="link" onClick={() => setOtpSent(false)} className="w-full">
-                    Change phone number
-                  </Button>
                 </div>
-              )}
-            </TabsContent>
-            <TabsContent value="email" className="space-y-4 mt-4">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="m@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                </div>
-                <Button onClick={handleEmailLogin} disabled={loading} className="w-full">
-                  {loading ? 'Signing in...' : 'Sign In'}
-                </Button>
+              </TabsContent>
+            </Tabs>
+            <div className="mt-6 space-y-4">
+              <Button
+                variant="outline"
+                onClick={handleGoogleLogin}
+                disabled={loading}
+                className="w-full"
+              >
+                Continue with Google
+              </Button>
+              <div className="text-center text-sm">
+                <a href="/register" className="text-primary hover:underline">
+                  Don&apos;t have an account? Register
+                </a>
               </div>
-            </TabsContent>
-          </Tabs>
-          <div className="mt-6 space-y-4">
-            <Button variant="outline" onClick={handleGoogleLogin} disabled={loading} className="w-full">
-              Continue with Google
-            </Button>
-            <div className="text-center text-sm">
-              <a href="/register" className="text-primary hover:underline">
-                Don&apos;t have an account? Register
-              </a>
             </div>
-          </div>
-          {error && <p className="text-sm text-destructive mt-2">{error}</p>}
-        </CardContent>
-      </Card>
+            {error && <p className="text-sm text-destructive mt-2">{error}</p>}
+          </CardContent>
+        </Card>
+      </div>
     </div>
-  )
+  );
 }

@@ -4,83 +4,122 @@ import Link from "next/link";
 import { useState } from "react";
 import { Check } from "lucide-react";
 
-interface Plan {
-  name: string;
-  badge: string;
-  badgeClass: string;
-  monthly: number;
-  yearly: number;
-  yearlyNote: string;
-  features: string[];
-  highlight?: boolean;
-  ctaStyle: "solid" | "ghost";
-}
-
-const PLANS: Plan[] = [
+const CREATORS = [
   {
-    name: "Starter",
-    badge: "For Small Businesses",
-    badgeClass: "bg-slate-100 text-slate-700",
-    monthly: 499,
-    yearly: 4990,
-    yearlyNote: "Save ₹1,000",
+    name: "Free",
+    monthly: 0,
+    yearly: 0,
     features: [
-      "5 social profiles",
-      "2 team members",
+      "3 social profiles",
+      "30 posts/month",
       "Basic analytics",
-      "WhatsApp inbox",
-      "AI content (50 posts/month)",
+      "1 user",
     ],
-    ctaStyle: "ghost",
+    ctaStyle: "ghost" as const,
   },
   {
-    name: "Pro",
-    badge: "Most Popular",
-    badgeClass: "bg-orange-100 text-orange-700",
-    monthly: 1499,
-    yearly: 14390,
-    yearlyNote: "Save ₹3,598",
-    features: [
-      "15 social profiles",
-      "5 team members",
-      "Advanced analytics",
-      "WhatsApp inbox + broadcast",
-      "AI content (200 posts/month)",
-      "Social listening",
-      "Festival campaign templates",
-      "Approval workflows",
-    ],
+    name: "Creator",
+    monthly: 299,
+    yearly: 2490,
     highlight: true,
-    ctaStyle: "solid",
+    badge: "Most Popular",
+    features: [
+      "10 social profiles",
+      "Unlimited posts",
+      "AI content in Hindi & English",
+      "WhatsApp inbox",
+      "Festival templates",
+    ],
+    ctaStyle: "solid" as const,
+  },
+  {
+    name: "Pro Creator",
+    monthly: 699,
+    yearly: 5990,
+    features: [
+      "20 social profiles",
+      "AI content unlimited",
+      "Advanced analytics",
+      "Social listening",
+      "3 users",
+    ],
+    ctaStyle: "ghost" as const,
+  },
+];
+
+const TEAMS = [
+  {
+    name: "Starter",
+    monthly: 999,
+    yearly: 7990,
+    features: ["5 profiles", "3 team members", "WhatsApp inbox", "GST invoice"],
+    ctaStyle: "ghost" as const,
   },
   {
     name: "Business",
-    badge: "For Agencies",
-    badgeClass: "bg-slate-100 text-slate-700",
-    monthly: 4999,
-    yearly: 47990,
-    yearlyNote: "Save ₹11,998",
+    monthly: 2499,
+    yearly: 19990,
+    highlight: true,
+    badge: "Best Value",
     features: [
-      "30 social profiles",
+      "20 profiles",
       "10 team members",
-      "White-label reports",
-      "Custom approval chains",
-      "Priority support",
-      "All AI features unlimited",
-      "Competitor analysis",
-      "API access (coming soon)",
-      "Dedicated account manager",
-      "Onboarding concierge",
+      "WhatsApp broadcast",
+      "AI unlimited",
+      "Approval workflows",
     ],
-    ctaStyle: "ghost",
+    ctaStyle: "solid" as const,
+  },
+  {
+    name: "Agency",
+    monthly: null,
+    yearly: null,
+    features: [
+      "Unlimited profiles",
+      "Unlimited members",
+      "White-label",
+      "API access",
+    ],
+    ctaStyle: "ghost" as const,
   },
 ];
 
 export function PricingCards() {
+  const [audience, setAudience] = useState<"creators" | "teams">("creators");
   const [yearly, setYearly] = useState(false);
+  const plans = audience === "creators" ? CREATORS : TEAMS;
 
   return (
     <div>
+      {/* Audience toggle */}
+      <div className="mb-6 flex justify-center">
+        <div className="inline-flex gap-1 rounded-xl border bg-white p-1.5 shadow-sm">
+          <button
+            type="button"
+            onClick={() => setAudience("creators")}
+            className={`rounded-lg px-5 py-2 text-sm font-medium transition-all ${
+              audience === "creators"
+                ? "bg-[#FF6B35] text-white shadow"
+                : "text-slate-500 hover:text-slate-900"
+            }`}
+          >
+            👤 Creators &amp; Freelancers
+          </button>
+          <button
+            type="button"
+            onClick={() => setAudience("teams")}
+            className={`rounded-lg px-5 py-2 text-sm font-medium transition-all ${
+              audience === "teams"
+                ? "bg-[#FF6B35] text-white shadow"
+                : "text-slate-500 hover:text-slate-900"
+            }`}
+          >
+            🏢 Teams &amp; Businesses
+          </button>
+        </div>
+      </div>
+
+      {/* Billing toggle */}
       <div className="mb-10 flex items-center justify-center gap-3">
         <span
           className={`text-sm font-medium ${yearly ? "text-slate-500" : "text-slate-900"}`}
@@ -112,10 +151,13 @@ export function PricingCards() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
-        {PLANS.map((plan) => {
-          const displayPrice = yearly
-            ? Math.round(plan.yearly / 12)
-            : plan.monthly;
+        {plans.map((plan) => {
+          const price =
+            plan.monthly === null
+              ? null
+              : yearly
+                ? Math.round((plan.yearly ?? 0) / 12)
+                : plan.monthly;
           return (
             <div
               key={plan.name}
@@ -123,7 +165,7 @@ export function PricingCards() {
                 "relative flex flex-col rounded-2xl bg-white p-8 transition-all",
                 plan.highlight
                   ? "shadow-lg md:-translate-y-2"
-                  : "shadow-sm border border-slate-200 hover:shadow-md",
+                  : "border border-slate-200 shadow-sm hover:shadow-md",
               ].join(" ")}
               style={
                 plan.highlight ? { border: "2px solid #FF6B35" } : undefined
@@ -134,48 +176,43 @@ export function PricingCards() {
                   className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 text-xs font-semibold text-white shadow"
                   style={{ backgroundColor: "#FF6B35" }}
                 >
-                  Most Popular
+                  {plan.badge}
                 </span>
               )}
-              <span
-                className={`inline-block w-fit rounded-full px-2.5 py-0.5 text-xs font-semibold ${plan.badgeClass}`}
-              >
-                {plan.badge}
-              </span>
-              <h3 className="mt-4 text-2xl font-bold text-slate-900">
-                {plan.name}
-              </h3>
-              <div className="mt-4 flex items-baseline gap-1">
-                <span className="text-4xl font-bold text-slate-900">
-                  ₹{displayPrice.toLocaleString("en-IN")}
-                </span>
-                <span className="text-sm text-slate-500">/mo</span>
+              <h3 className="text-xl font-bold text-slate-900">{plan.name}</h3>
+              <div className="mt-3 flex items-baseline gap-1">
+                {price === null ? (
+                  <span className="text-2xl font-bold text-slate-900">
+                    Custom
+                  </span>
+                ) : price === 0 ? (
+                  <span className="text-3xl font-bold text-slate-900">
+                    Free
+                  </span>
+                ) : (
+                  <>
+                    <span className="text-3xl font-bold text-slate-900">
+                      ₹{price.toLocaleString("en-IN")}
+                    </span>
+                    <span className="text-sm text-slate-500">/mo</span>
+                  </>
+                )}
               </div>
-              <p className="mt-1 text-sm text-slate-500">
-                {yearly
-                  ? `₹${plan.yearly.toLocaleString("en-IN")}/year · ${plan.yearlyNote}`
-                  : `Billed monthly`}
-              </p>
-
-              <ul className="mt-6 flex-1 space-y-3">
+              <ul className="mt-5 flex-1 space-y-2.5">
                 {plan.features.map((f) => (
                   <li
                     key={f}
                     className="flex items-start gap-2 text-sm text-slate-700"
                   >
-                    <Check
-                      className="mt-0.5 h-4 w-4 flex-shrink-0"
-                      style={{ color: "#10B981" }}
-                    />
-                    <span>{f}</span>
+                    <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-500" />
+                    {f}
                   </li>
                 ))}
               </ul>
-
               <Link
                 href="/register"
                 className={[
-                  "mt-8 rounded-md px-4 py-2.5 text-center text-sm font-semibold transition-all active:scale-[0.98]",
+                  "mt-7 rounded-md px-4 py-2.5 text-center text-sm font-semibold transition-all active:scale-[0.98]",
                   plan.ctaStyle === "solid"
                     ? "text-white shadow hover:shadow-md"
                     : "border border-slate-300 text-slate-900 hover:bg-slate-50",
@@ -186,7 +223,11 @@ export function PricingCards() {
                     : undefined
                 }
               >
-                Start Free Trial
+                {price === null
+                  ? "Contact Sales"
+                  : price === 0
+                    ? "Start for Free"
+                    : "Start Free Trial"}
               </Link>
             </div>
           );
@@ -194,8 +235,17 @@ export function PricingCards() {
       </div>
 
       <p className="mt-8 text-center text-sm text-slate-500">
-        All plans include 14-day free trial · No credit card required · Cancel
-        anytime · GST invoice generated automatically
+        All plans include 14-day free trial · No credit card required · GST
+        invoice auto-generated
+      </p>
+      <p className="mt-2 text-center text-sm">
+        <Link
+          href="/pricing"
+          className="font-medium underline"
+          style={{ color: "#FF6B35" }}
+        >
+          See full feature comparison →
+        </Link>
       </p>
     </div>
   );

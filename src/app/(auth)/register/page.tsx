@@ -1,20 +1,18 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import Link from "next/link";
+import { User, Building2, Check, ArrowRight, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { createClient } from "@/lib/supabase/client";
 
-const ALLOWED_PLANS = ["starter", "pro", "business"] as const;
+type AccountType = "individual" | "team";
+type Step = 0 | 1 | 2;
+
+const ORANGE = "#FF6B35";
 
 export default function RegisterPage() {
   return (
@@ -28,89 +26,58 @@ function RegisterPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  useEffect(() => {
-    const plan = searchParams.get("plan");
-    if (plan && (ALLOWED_PLANS as readonly string[]).includes(plan)) {
-      localStorage.setItem("intendedPlan", plan);
-    }
-  }, [searchParams]);
-
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-  const [countdown, setCountdown] = useState(300);
+  const [accountType, setAccountType] = useState<AccountType | null>(null);
+  const [step, setStep] = useState<Step>(0);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [step, setStep] = useState<"phone" | "otp" | "details">("phone");
 
-  const handleSendOtp = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const response = await fetch("/api/auth/otp/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Failed to send OTP");
-      setStep("otp");
-      setCountdown(300);
-      const timer = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to send OTP");
-    } finally {
-      setLoading(false);
-    }
+  const persistPlan = () => {
+    const plan = searchParams.get("plan");
+    if (plan) localStorage.setItem("intendedPlan", plan);
   };
 
-  const handleVerifyOtp = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const response = await fetch("/api/auth/otp/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, otp: otp.join("") }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Failed to verify OTP");
-      setStep("details");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to verify OTP");
-    } finally {
-      setLoading(false);
-    }
+  const handleContinueFromPath = () => {
+    if (!accountType) return;
+    localStorage.setItem("account_type", accountType);
+    persistPlan();
+    setStep(1);
   };
 
-  const handleCompleteRegistration = async () => {
+  const handleGoogleSignIn = async () => {
+    if (!accountType) return;
+    localStorage.setItem("account_type", accountType);
+    persistPlan();
+    const supabase = createClient();
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/api/auth/callback`,
+        queryParams: { account_type: accountType },
+      },
+    });
+  };
+
+  const handleRegister = async () => {
+    if (!accountType) return;
     setLoading(true);
     setError("");
     try {
-      const response = await fetch("/api/auth/register", {
+      const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           full_name: fullName,
-          email: email || undefined,
+          email,
           password,
-          phone,
+          account_type: accountType,
         }),
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Registration failed");
-      router.push("/onboarding");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Registration failed");
+      setStep(2);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed");
     } finally {
@@ -118,215 +85,346 @@ function RegisterPageInner() {
     }
   };
 
-  const handleEmailRegister = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ full_name: fullName, email, password }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Registration failed");
-      router.push("/onboarding");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Registration failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleOtpChange = (index: number, value: string) => {
-    if (value.length > 1) return;
-    const newOtp = [...otp];
-    newOtp[index] = value;
-    setOtp(newOtp);
-    if (value && index < 5) {
-      const nextInput = document.getElementById(
-        `otp-${index + 1}`,
-      ) as HTMLInputElement;
-      nextInput?.focus();
-    }
-  };
-
-  const formatCountdown = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
+  const inner =
+    step === 0 ? (
+      <PathSelection
+        selected={accountType}
+        onSelect={setAccountType}
+        onContinue={handleContinueFromPath}
+      />
+    ) : step === 1 ? (
+      <SignUpForm
+        accountType={accountType!}
+        fullName={fullName}
+        email={email}
+        password={password}
+        setFullName={setFullName}
+        setEmail={setEmail}
+        setPassword={setPassword}
+        loading={loading}
+        error={error}
+        onRegister={handleRegister}
+        onGoogle={handleGoogleSignIn}
+        onBack={() => setStep(0)}
+      />
+    ) : (
+      <AccountCreatedScreen
+        accountType={accountType!}
+        onContinue={() => router.push("/onboarding")}
+      />
+    );
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Sign Up</CardTitle>
-          <CardDescription>Create an account to get started</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="phone" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="phone">Phone</TabsTrigger>
-              <TabsTrigger value="email">Email</TabsTrigger>
-            </TabsList>
-            <TabsContent value="phone" className="space-y-4 mt-4">
-              {step === "phone" && (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      placeholder="+91XXXXXXXXXX"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                    />
-                  </div>
-                  <Button
-                    onClick={handleSendOtp}
-                    disabled={loading}
-                    className="w-full"
-                  >
-                    {loading ? "Sending..." : "Send OTP"}
-                  </Button>
-                </div>
-              )}
-              {step === "otp" && (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Enter OTP</Label>
-                    <div className="flex gap-2">
-                      {otp.map((digit, index) => (
-                        <Input
-                          key={index}
-                          id={`otp-${index}`}
-                          type="text"
-                          maxLength={1}
-                          value={digit}
-                          onChange={(e) =>
-                            handleOtpChange(index, e.target.value)
-                          }
-                          className="w-10 h-10 text-center text-lg"
-                        />
-                      ))}
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Expires in {formatCountdown(countdown)}
-                    </p>
-                  </div>
-                  <Button
-                    onClick={handleVerifyOtp}
-                    disabled={loading}
-                    className="w-full"
-                  >
-                    {loading ? "Verifying..." : "Verify OTP"}
-                  </Button>
-                  <Button
-                    variant="link"
-                    onClick={() => setStep("phone")}
-                    className="w-full"
-                  >
-                    Change phone number
-                  </Button>
-                </div>
-              )}
-              {step === "details" && (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="fullName">Full Name</Label>
-                    <Input
-                      id="fullName"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      placeholder="John Doe"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email (Optional)</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="m@example.com"
-                    />
-                  </div>
-                  <Button
-                    onClick={handleCompleteRegistration}
-                    disabled={loading || !fullName}
-                    className="w-full"
-                  >
-                    {loading ? "Creating Account..." : "Complete Registration"}
-                  </Button>
-                </div>
-              )}
-            </TabsContent>
-            <TabsContent value="email" className="space-y-4 mt-4">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="fullName">Full Name</Label>
-                  <Input
-                    id="fullName"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="John Doe"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="m@example.com"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Must be at least 8 characters with 1 uppercase and 1 number
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm Password</Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                  />
-                </div>
-                <Button
-                  onClick={handleEmailRegister}
-                  disabled={
-                    loading ||
-                    !fullName ||
-                    !email ||
-                    !password ||
-                    password !== confirmPassword
-                  }
-                  className="w-full"
-                >
-                  {loading ? "Creating Account..." : "Sign Up"}
-                </Button>
-              </div>
-            </TabsContent>
-          </Tabs>
-          <div className="mt-6 text-center text-sm">
-            <a href="/login" className="text-primary hover:underline">
-              Already have an account? Sign In
-            </a>
-          </div>
-          {error && <p className="text-sm text-destructive mt-2">{error}</p>}
-        </CardContent>
-      </Card>
+    <div className="flex flex-col items-center">
+      <div className="mb-8 text-center">
+        <h1 className="text-3xl font-bold">
+          <span className="text-slate-800">Social</span>
+          <span style={{ color: "#FF6B35" }}>Bharat</span>
+          <span aria-hidden className="ml-1">
+            🇮🇳
+          </span>
+        </h1>
+        <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">
+          India&apos;s Social Media Platform
+        </p>
+      </div>
+      {inner}
+    </div>
+  );
+}
+
+// ---------- Step 0: Path Selection ----------
+
+function PathSelection({
+  selected,
+  onSelect,
+  onContinue,
+}: {
+  selected: AccountType | null;
+  onSelect: (t: AccountType) => void;
+  onContinue: () => void;
+}) {
+  return (
+    <div className="max-w-md mx-auto space-y-5">
+      <div className="text-center">
+        <h2 className="text-xl font-bold text-slate-900">Choose your path</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          We&apos;ll tailor your experience to fit your needs.
+        </p>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <PathCard
+          icon={<User className="h-10 w-10" />}
+          title="Individual / Creator"
+          subtitle="For freelancers, influencers, and solo creators"
+          tags="Personal brands • Content creators • Freelancers"
+          selected={selected === "individual"}
+          onSelect={() => onSelect("individual")}
+        />
+        <PathCard
+          icon={<Building2 className="h-10 w-10" />}
+          title="Team / Business"
+          subtitle="For SMBs, agencies, and growing teams"
+          tags="Businesses • Marketing agencies • D2C brands"
+          selected={selected === "team"}
+          onSelect={() => onSelect("team")}
+        />
+      </div>
+
+      <Button
+        className="w-full gap-2 font-semibold text-white"
+        style={{ backgroundColor: ORANGE }}
+        disabled={!selected}
+        onClick={onContinue}
+      >
+        Continue
+        <ArrowRight className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+}
+
+function PathCard({
+  icon,
+  title,
+  subtitle,
+  tags,
+  selected,
+  onSelect,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  subtitle: string;
+  tags: string;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className="relative flex flex-col items-start rounded-xl border-2 p-4 text-left transition-all hover:border-orange-300"
+      style={
+        selected
+          ? { borderColor: ORANGE, backgroundColor: "#FFF4EC" }
+          : { borderColor: "#E2E8F0", backgroundColor: "#fff" }
+      }
+    >
+      {selected && (
+        <span
+          className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full text-white"
+          style={{ backgroundColor: ORANGE }}
+        >
+          <Check className="h-3 w-3" />
+        </span>
+      )}
+      <span style={{ color: selected ? ORANGE : "#64748B" }}>{icon}</span>
+      <p className="mt-3 text-sm font-semibold text-slate-900">{title}</p>
+      <p className="mt-1 text-xs leading-relaxed text-slate-500">{subtitle}</p>
+      <p className="mt-2 text-[10px] font-medium text-slate-400">{tags}</p>
+    </button>
+  );
+}
+
+// ---------- Step 1: Sign Up Form ----------
+
+function SignUpForm({
+  accountType,
+  fullName,
+  email,
+  password,
+  setFullName,
+  setEmail,
+  setPassword,
+  loading,
+  error,
+  onRegister,
+  onGoogle,
+  onBack,
+}: {
+  accountType: AccountType;
+  fullName: string;
+  email: string;
+  password: string;
+  setFullName: (v: string) => void;
+  setEmail: (v: string) => void;
+  setPassword: (v: string) => void;
+  loading: boolean;
+  error: string;
+  onRegister: () => void;
+  onGoogle: () => void;
+  onBack: () => void;
+}) {
+  const isTeam = accountType === "team";
+  const canSubmit =
+    fullName.length >= 2 && email.length > 0 && password.length >= 8;
+
+  return (
+    <div className="max-w-md mx-auto space-y-4">
+      <button
+        type="button"
+        onClick={onBack}
+        className="text-xs text-slate-400 hover:text-slate-600"
+      >
+        ← Back
+      </button>
+
+      <div>
+        <h2 className="text-xl font-bold text-slate-900">
+          Create your account
+        </h2>
+        <p className="mt-1 text-sm text-slate-500">
+          {isTeam
+            ? "Start your team workspace — free for 14 days."
+            : "Start publishing smarter — free for 14 days."}
+        </p>
+      </div>
+
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full gap-3 border-slate-300 font-medium"
+        onClick={onGoogle}
+      >
+        <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden>
+          <path
+            fill="#4285F4"
+            d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"
+          />
+          <path
+            fill="#34A853"
+            d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"
+          />
+          <path
+            fill="#FBBC05"
+            d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"
+          />
+          <path
+            fill="#EA4335"
+            d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"
+          />
+        </svg>
+        Continue with Google
+      </Button>
+
+      <div className="flex items-center gap-3">
+        <hr className="flex-1 border-slate-200" />
+        <span className="text-xs text-slate-400">or</span>
+        <hr className="flex-1 border-slate-200" />
+      </div>
+
+      <div className="space-y-3">
+        <div className="space-y-1">
+          <Label htmlFor="fullName">Full Name</Label>
+          <Input
+            id="fullName"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            placeholder="Rahul Sharma"
+            autoComplete="name"
+          />
+        </div>
+
+        <div className="space-y-1">
+          <Label htmlFor="email">{isTeam ? "Work Email" : "Email"}</Label>
+          <Input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder={isTeam ? "you@yourcompany.com" : "you@example.com"}
+            autoComplete="email"
+          />
+          {isTeam && (
+            <p className="text-xs text-slate-400">
+              Use your work email for team features
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-1">
+          <Label htmlFor="password">Password</Label>
+          <Input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Minimum 8 characters"
+            autoComplete="new-password"
+          />
+        </div>
+      </div>
+
+      {error && <p className="text-sm text-destructive">{error}</p>}
+
+      <Button
+        className="w-full gap-2 font-semibold text-white"
+        style={{ backgroundColor: ORANGE }}
+        disabled={loading || !canSubmit}
+        onClick={onRegister}
+      >
+        {loading ? "Creating Account…" : "Create Account"}
+        {!loading && <ArrowRight className="h-4 w-4" />}
+      </Button>
+
+      <p className="text-center text-xs text-slate-400">
+        Already have an account?{" "}
+        <Link
+          href="/login"
+          className="font-medium text-slate-600 hover:underline"
+        >
+          Sign in
+        </Link>
+      </p>
+    </div>
+  );
+}
+
+// ---------- Step 2: Account Created ----------
+
+function AccountCreatedScreen({
+  accountType,
+  onContinue,
+}: {
+  accountType: AccountType;
+  onContinue: () => void;
+}) {
+  return (
+    <div className="max-w-md mx-auto space-y-6 text-center">
+      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-orange-100">
+        <Mail className="h-8 w-8" style={{ color: ORANGE }} />
+      </div>
+
+      <div>
+        <h2 className="text-xl font-bold text-slate-900">Account created!</h2>
+        <p className="mt-2 text-sm text-slate-500">
+          We&apos;ve sent a confirmation link to your email. Check your inbox
+          and verify your address to activate your account.
+        </p>
+      </div>
+
+      <Button
+        className="w-full gap-2 font-semibold text-white"
+        style={{ backgroundColor: ORANGE }}
+        onClick={onContinue}
+      >
+        {accountType === "team"
+          ? "Continue to Workspace Setup"
+          : "Go to Dashboard"}
+        <ArrowRight className="h-4 w-4" />
+      </Button>
+
+      <p className="text-xs text-slate-400">
+        Didn&apos;t receive an email?{" "}
+        <button
+          type="button"
+          className="font-medium text-slate-600 hover:underline"
+          onClick={onContinue}
+        >
+          Continue anyway
+        </button>
+      </p>
     </div>
   );
 }

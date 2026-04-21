@@ -1,3 +1,4 @@
+import { env } from "./env";
 import { logger } from "./logger";
 
 export interface RateLimitResult {
@@ -20,16 +21,10 @@ export async function hourlyRateLimit(
   key: string,
   limit: number,
 ): Promise<RateLimitResult> {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  const { UPSTASH_REDIS_REST_URL: url, UPSTASH_REDIS_REST_TOKEN: token } = env;
   const now = Math.floor(Date.now() / 1000);
   const bucket = Math.floor(now / 3600);
   const reset = (bucket + 1) * 3600;
-
-  if (!url || !token) {
-    logger.warn("Upstash not configured; rate limit skipped", { key });
-    return { ok: true, remaining: -1, reset, limit };
-  }
 
   const redisKey = `ratelimit:${key}:${bucket}`;
 
@@ -87,16 +82,10 @@ export async function windowRateLimit(
   limit: number,
   windowSeconds: number,
 ): Promise<RateLimitResult> {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  const { UPSTASH_REDIS_REST_URL: url, UPSTASH_REDIS_REST_TOKEN: token } = env;
   const now = Math.floor(Date.now() / 1000);
   const bucket = Math.floor(now / windowSeconds);
   const reset = (bucket + 1) * windowSeconds;
-
-  if (!url || !token) {
-    logger.warn("Upstash not configured; rate limit skipped", { key });
-    return { ok: true, remaining: -1, reset, limit };
-  }
 
   const redisKey = `ratelimit:${key}:${bucket}`;
 

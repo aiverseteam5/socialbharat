@@ -12,12 +12,14 @@ export function AIContentAssist() {
   const [prompt, setPrompt] = useState("");
   const [generatedContent, setGeneratedContent] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [genError, setGenError] = useState("");
   const { setContent, language, tone, setLanguage, setTone } = usePublishing();
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
 
     setIsGenerating(true);
+    setGenError("");
     try {
       const response = await fetch("/api/ai/generate-content", {
         method: "POST",
@@ -33,9 +35,14 @@ export function AIContentAssist() {
       });
 
       const data = await response.json();
+      if (!response.ok) {
+        setGenError(data.error || "Failed to generate content");
+        return;
+      }
       setGeneratedContent(data.content);
     } catch (error) {
       logger.error("AI content generation failed", error);
+      setGenError("Failed to generate content. Please try again.");
     } finally {
       setIsGenerating(false);
     }
@@ -111,6 +118,8 @@ export function AIContentAssist() {
           </>
         )}
       </Button>
+
+      {genError && <p className="text-sm text-destructive">{genError}</p>}
 
       {generatedContent && (
         <div className="space-y-2">

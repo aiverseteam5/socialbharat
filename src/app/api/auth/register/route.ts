@@ -18,6 +18,7 @@ const bodySchema = z
       .string()
       .regex(/^\+91[6-9]\d{9}$/, "Invalid Indian phone number")
       .optional(),
+    account_type: z.enum(["individual", "team"]).default("individual"),
   })
   .refine((d) => d.phone || (d.email && d.password && d.password.length >= 8), {
     message:
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { full_name, phone } = parsed.data;
+    const { full_name, phone, account_type } = parsed.data;
     const email =
       parsed.data.email && parsed.data.email !== "" ? parsed.data.email : null;
     const password =
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
 
       const { error: updateErr } = await supabase
         .from("users")
-        .update({ full_name, email })
+        .update({ full_name, email, account_type })
         .eq("id", existing.id);
 
       if (updateErr) {
@@ -97,7 +98,7 @@ export async function POST(request: NextRequest) {
         email,
         password,
         email_confirm: true,
-        user_metadata: { full_name },
+        user_metadata: { full_name, account_type },
       });
 
     if (signUpErr || !authData.user) {
@@ -112,23 +113,29 @@ export async function POST(request: NextRequest) {
 
     const userId = authData.user.id;
 
-    const { error: insertErr } = await svc.from("users").insert({
-      id: userId,
-      email,
-      phone: null,
-      full_name,
-      avatar_url: null,
-      preferred_language: "en",
-      notification_preferences: {
-        in_app: true,
-        email: true,
-        whatsapp: false,
-        sms: false,
+    // Upsert — a DB trigger may have already created the row when auth.users
+    // was inserted by admin.createUser. Use upsert to avoid a 409 conflict.
+    const { error: insertErr } = await svc.from("users").upsert(
+      {
+        id: userId,
+        email,
+        phone: null,
+        full_name,
+        account_type,
+        avatar_url: null,
+        preferred_language: "en",
+        notification_preferences: {
+          in_app: true,
+          email: true,
+          whatsapp: false,
+          sms: false,
+        },
       },
-    });
+      { onConflict: "id" },
+    );
 
     if (insertErr) {
-      logger.error("Register (email): users insert failed", insertErr, {
+      logger.error("Register (email): users upsert failed", insertErr, {
         userId,
       });
       return NextResponse.json(

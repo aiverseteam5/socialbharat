@@ -6,6 +6,14 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2, CheckCircle, XCircle } from "lucide-react";
 import { logger } from "@/lib/logger";
+import {
+  FaWhatsapp,
+  FaInstagram,
+  FaFacebook,
+  FaLinkedin,
+  FaYoutube,
+  FaXTwitter,
+} from "react-icons/fa6";
 
 interface SocialProfile {
   id: string;
@@ -52,16 +60,48 @@ export default function SocialAccountsPage() {
   };
 
   const platforms = [
-    { id: "facebook", name: "Facebook", color: "bg-blue-600" },
+    {
+      id: "facebook",
+      name: "Facebook",
+      Icon: FaFacebook,
+      color: "#1877F2",
+      bg: "bg-blue-50",
+    },
     {
       id: "instagram",
       name: "Instagram",
-      color: "bg-gradient-to-br from-purple-600 to-pink-500",
+      Icon: FaInstagram,
+      color: "#E1306C",
+      bg: "bg-pink-50",
     },
-    { id: "twitter", name: "Twitter/X", color: "bg-sky-500" },
-    { id: "linkedin", name: "LinkedIn", color: "bg-blue-700" },
-    { id: "youtube", name: "YouTube", color: "bg-red-600" },
-    { id: "whatsapp", name: "WhatsApp", color: "bg-green-500" },
+    {
+      id: "twitter",
+      name: "Twitter/X",
+      Icon: FaXTwitter,
+      color: "#000000",
+      bg: "bg-slate-100",
+    },
+    {
+      id: "linkedin",
+      name: "LinkedIn",
+      Icon: FaLinkedin,
+      color: "#0A66C2",
+      bg: "bg-blue-50",
+    },
+    {
+      id: "youtube",
+      name: "YouTube",
+      Icon: FaYoutube,
+      color: "#FF0000",
+      bg: "bg-red-50",
+    },
+    {
+      id: "whatsapp",
+      name: "WhatsApp",
+      Icon: FaWhatsapp,
+      color: "#25D366",
+      bg: "bg-green-50",
+    },
   ];
 
   if (loading) {
@@ -85,9 +125,9 @@ export default function SocialAccountsPage() {
             <Card key={platform.id} className="p-4">
               <div className="flex items-center justify-between mb-3">
                 <div
-                  className={`w-10 h-10 ${platform.color} rounded-lg flex items-center justify-center text-white font-bold`}
+                  className={`w-10 h-10 ${platform.bg} rounded-lg flex items-center justify-center`}
                 >
-                  {platform.name.charAt(0)}
+                  <platform.Icon size={22} color={platform.color} aria-hidden />
                 </div>
                 {connectedProfile ? (
                   <CheckCircle className="w-5 h-5 text-green-500" />

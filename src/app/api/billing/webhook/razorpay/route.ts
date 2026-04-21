@@ -6,6 +6,7 @@ import { calculateGST } from "@/lib/gst";
 import { serverTrack } from "@/lib/analytics-server";
 import { sendNotificationVoid } from "@/lib/notifications/send";
 import { logger } from "@/lib/logger";
+import { env } from "@/lib/env";
 
 export const runtime = "nodejs";
 
@@ -49,7 +50,7 @@ interface RazorpayEvent {
 }
 
 export async function POST(request: NextRequest) {
-  const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+  const webhookSecret = env.RAZORPAY_WEBHOOK_SECRET;
   if (!webhookSecret) {
     logger.error("RAZORPAY_WEBHOOK_SECRET not configured");
     return NextResponse.json(
@@ -219,7 +220,7 @@ async function handlePaymentCaptured(
   // shown at checkout. If base_amount wasn't carried on the notes we fall
   // back to the gross payment amount (which already includes GST).
   const gross = baseAmountPaise > 0 ? baseAmountPaise : payment.amount;
-  const companyState = process.env.COMPANY_GST_STATE || "Karnataka";
+  const companyState = env.COMPANY_GST_STATE ?? "Karnataka";
   const gstBreakdown = calculateGST(
     gross,
     billingState || companyState,

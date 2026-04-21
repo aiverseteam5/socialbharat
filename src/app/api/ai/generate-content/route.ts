@@ -66,14 +66,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const parsed = generateContentSchema.parse(body);
 
-    const apiKey = process.env.OPENAI_API_KEY;
-
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "OpenAI API key not configured" },
-        { status: 500 },
-      );
-    }
+    const { env } = await import("@/lib/env");
+    const apiKey = env.OPENAI_API_KEY;
 
     // Build system prompt for Indian social media context
     const systemPrompt = `You are an expert social media content creator for the Indian market.
