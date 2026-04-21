@@ -1,4 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/service";
+import { sendNotificationVoid } from "@/lib/notifications/send";
 import { logger } from "@/lib/logger";
 
 export type InboxPlatform =
@@ -158,6 +159,24 @@ export async function processIncomingMessage(
       updated_at: new Date().toISOString(),
     })
     .eq("id", conversationId);
+
+  // Notify assigned agent (best-effort)
+  const { data: conv } = await supabase
+    .from("conversations")
+    .select("assigned_to")
+    .eq("id", conversationId)
+    .maybeSingle();
+
+  if (conv?.assigned_to) {
+    sendNotificationVoid({
+      userId: conv.assigned_to as string,
+      orgId: incoming.orgId,
+      type: "inbox_message",
+      title: "New inbox message",
+      body: incoming.message.content.substring(0, 100),
+      link: `/inbox`,
+    });
+  }
 
   return {
     conversationId,

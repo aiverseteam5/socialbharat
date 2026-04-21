@@ -26,6 +26,7 @@ import type {
   InboxPlatform,
   ConversationStatus,
 } from "@/stores/inbox-store";
+import type { RealtimeStatus } from "@/hooks/useRealtime";
 
 const platformIcon: Record<InboxPlatform, typeof Facebook> = {
   facebook: Facebook,
@@ -33,6 +34,13 @@ const platformIcon: Record<InboxPlatform, typeof Facebook> = {
   twitter: Twitter,
   linkedin: Linkedin,
   whatsapp: MessageCircle,
+};
+
+const statusConfig: Record<RealtimeStatus, { dot: string; label: string }> = {
+  connected: { dot: "bg-green-500", label: "Live" },
+  connecting: { dot: "bg-yellow-400 animate-pulse", label: "Connecting" },
+  disconnected: { dot: "bg-slate-400", label: "Offline" },
+  error: { dot: "bg-red-500", label: "Error" },
 };
 
 function formatTimeAgo(iso: string | null): string {
@@ -52,6 +60,7 @@ interface Props {
   selectedId: string | null;
   filters: InboxFilters;
   isLoading: boolean;
+  realtimeStatus: RealtimeStatus;
   onSelect: (id: string) => void;
   onFilterChange: (filters: InboxFilters) => void;
 }
@@ -61,19 +70,35 @@ export function ConversationList({
   selectedId,
   filters,
   isLoading,
+  realtimeStatus,
   onSelect,
   onFilterChange,
 }: Props) {
+  const sc = statusConfig[realtimeStatus];
+
   return (
     <div className="flex h-full flex-col border-r">
       <div className="space-y-2 border-b p-3">
-        <Input
-          placeholder="Search contacts..."
-          value={filters.search ?? ""}
-          onChange={(e) =>
-            onFilterChange({ ...filters, search: e.target.value || undefined })
-          }
-        />
+        <div className="flex items-center gap-2">
+          <Input
+            className="flex-1"
+            placeholder="Search contacts..."
+            value={filters.search ?? ""}
+            onChange={(e) =>
+              onFilterChange({
+                ...filters,
+                search: e.target.value || undefined,
+              })
+            }
+          />
+          <div
+            className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground"
+            title={`Realtime: ${sc.label}`}
+          >
+            <span className={`h-2 w-2 rounded-full ${sc.dot}`} />
+            <span className="hidden sm:inline">{sc.label}</span>
+          </div>
+        </div>
         <div className="flex gap-2">
           <Select
             value={filters.platform ?? "all"}

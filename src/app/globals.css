@@ -80,3 +80,43 @@
   from { opacity: 0; transform: translateY(4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+/* Marketing landing page animations */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.animate-marquee {
+  animation: marquee 28s linear infinite;
+  width: max-content;
+}
+
+@keyframes toastSlideIn {
+  0%   { opacity: 0; transform: translateY(20px); }
+  15%  { opacity: 1; transform: translateY(0); }
+  80%  { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(10px); }
+}
+.animate-toast {
+  opacity: 0;
+  animation: toastSlideIn 6s ease-in-out 1s infinite;
+}
+
+@keyframes livePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }
+  50%      { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+}
+.animate-live-pulse {
+  animation: livePulse 1.8s ease-out infinite;
+}
+
+.bg-grid-pattern {
+  background-image:
+    linear-gradient(to right, rgba(15, 23, 42, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+html {
+  scroll-behavior: smooth;
+}

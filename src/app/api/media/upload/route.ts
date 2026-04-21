@@ -5,7 +5,10 @@ import { logger } from "@/lib/logger";
 
 /**
  * POST /api/media/upload
- * Upload a file to Supabase Storage and create media asset record
+ * Upload a file to Supabase Storage and create a media asset record.
+ *
+ * Returns the permanent public URL (not a signed URL) so platform APIs
+ * (Instagram container, Facebook photos) can fetch the media directly.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -32,7 +35,6 @@ export async function POST(request: NextRequest) {
 
     const { file } = validationResult.data;
 
-    // Get user's organization
     const { data: orgMember } = await supabase
       .from("org_members")
       .select("org_id")
@@ -49,7 +51,6 @@ export async function POST(request: NextRequest) {
 
     const orgId = orgMember.org_id;
 
-    // Upload to Supabase Storage
     const fileExt = file.name.split(".").pop();
     const fileName = `${orgId}/${Date.now()}.${fileExt}`;
 
@@ -61,12 +62,20 @@ export async function POST(request: NextRequest) {
       throw uploadError;
     }
 
-    // Get public URL
     const {
       data: { publicUrl },
     } = supabase.storage.from("media").getPublicUrl(fileName);
 
-    // Create media asset record
+    // For images, derive a thumbnail URL using Supabase's on-demand image
+    // transformation. If image transformations are disabled on the project,
+    // the URL simply falls back to serving the original.
+    const isImage = file.type.startsWith("image/");
+    const thumbnailUrl = isImage
+      ? supabase.storage.from("media").getPublicUrl(fileName, {
+          transform: { width: 400, height: 400, resize: "cover" },
+        }).data.publicUrl
+      : null;
+
     const { data: mediaAsset, error: dbError } = await supabase
       .from("media_assets")
       .insert({
@@ -76,6 +85,7 @@ export async function POST(request: NextRequest) {
         file_size: file.size,
         storage_path: fileName,
         cdn_url: publicUrl,
+        thumbnail_url: thumbnailUrl,
         uploaded_by: user.id,
       })
       .select()
@@ -85,7 +95,7 @@ export async function POST(request: NextRequest) {
       throw dbError;
     }
 
-    return NextResponse.json({ mediaAsset }, { status: 201 });
+    return NextResponse.json({ mediaAsset, publicUrl }, { status: 201 });
   } catch (error) {
     logger.error("POST /api/media/upload failed", error);
     return NextResponse.json(

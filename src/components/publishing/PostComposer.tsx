@@ -1,10 +1,10 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { usePublishing } from '@/hooks/usePublishing'
-import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
-import { Send, Clock, Save } from 'lucide-react'
+import { useState } from "react";
+import { usePublishing } from "@/hooks/usePublishing";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Send, Clock, Save, X, Loader2, AlertCircle } from "lucide-react";
 
 const PLATFORM_LIMITS: Record<string, number> = {
   twitter: 280,
@@ -13,117 +13,138 @@ const PLATFORM_LIMITS: Record<string, number> = {
   linkedin: 3000,
   youtube: 5000,
   whatsapp: 4096,
-}
+};
 
 export function PostComposer() {
   const {
     content,
     selectedPlatforms,
-    mediaFiles,
+    mediaUploads,
     scheduledAt,
     setContent,
     addPlatform,
     removePlatform,
-    setMediaFiles,
+    addMediaUpload,
+    updateMediaUpload,
+    removeMediaUpload,
     setScheduledAt,
     reset,
     canPublish,
     characterCount,
-  } = usePublishing()
-  
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  
-  const currentLimit = selectedPlatforms.length > 0
-    ? Math.min(...selectedPlatforms.map((p) => PLATFORM_LIMITS[p] || 63206))
-    : 63206
-  
-  const handlePublish = async () => {
-    setIsSubmitting(true)
+    hasUploadingMedia,
+    uploadedMediaUrls,
+  } = usePublishing();
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const currentLimit =
+    selectedPlatforms.length > 0
+      ? Math.min(...selectedPlatforms.map((p) => PLATFORM_LIMITS[p] || 63206))
+      : 63206;
+
+  const uploadFile = async (file: File) => {
+    const tempId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    addMediaUpload({ tempId, file, status: "uploading", progress: 0 });
+
     try {
-      const response = await fetch('/api/posts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          content,
-          media_urls: mediaFiles.map((f) => URL.createObjectURL(f)),
-          platforms: selectedPlatforms,
-          status: 'draft',
-        }),
-      })
-      
-      if (response.ok) {
-        reset()
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/media/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errJson = (await response.json().catch(() => ({}))) as {
+          error?: string;
+        };
+        throw new Error(errJson.error || "Upload failed");
       }
-    } finally {
-      setIsSubmitting(false)
+
+      const data = (await response.json()) as {
+        mediaAsset: {
+          id: string;
+          cdn_url: string;
+          thumbnail_url?: string | null;
+        };
+        publicUrl: string;
+      };
+
+      updateMediaUpload(tempId, {
+        status: "uploaded",
+        progress: 100,
+        url: data.publicUrl,
+        mediaAssetId: data.mediaAsset.id,
+        thumbnailUrl: data.mediaAsset.thumbnail_url ?? undefined,
+      });
+    } catch (error) {
+      updateMediaUpload(tempId, {
+        status: "failed",
+        progress: 0,
+        error: error instanceof Error ? error.message : "Upload failed",
+      });
     }
-  }
-  
-  const handleSchedule = async () => {
-    if (!scheduledAt) return
-    setIsSubmitting(true)
+  };
+
+  const submitPost = async (status: "draft", schedule?: boolean) => {
+    setIsSubmitting(true);
     try {
-      const response = await fetch('/api/posts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          content,
-          media_urls: mediaFiles.map((f) => URL.createObjectURL(f)),
-          platforms: selectedPlatforms,
-          status: 'draft',
-          scheduled_at: scheduledAt.toISOString(),
-        }),
-      })
-      
-      if (response.ok) {
-        const data = await response.json()
+      const body: Record<string, unknown> = {
+        content,
+        media_urls: uploadedMediaUrls,
+        platforms: selectedPlatforms,
+        status,
+      };
+      if (schedule && scheduledAt) {
+        body.scheduled_at = scheduledAt.toISOString();
+      }
+
+      const response = await fetch("/api/posts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) return;
+
+      if (schedule && scheduledAt) {
+        const data = await response.json();
         await fetch(`/api/posts/${data.post.id}/schedule`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ scheduled_at: scheduledAt.toISOString() }),
-        })
-        reset()
+        });
       }
+
+      reset();
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
-  
-  const handleSaveDraft = async () => {
-    setIsSubmitting(true)
-    try {
-      const response = await fetch('/api/posts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          content,
-          media_urls: mediaFiles.map((f) => URL.createObjectURL(f)),
-          platforms: selectedPlatforms,
-          status: 'draft',
-        }),
-      })
-      
-      if (response.ok) {
-        reset()
-      }
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-  
+  };
+
+  const handlePublish = () => submitPost("draft");
+  const handleSchedule = () => {
+    if (!scheduledAt) return;
+    return submitPost("draft", true);
+  };
+  const handleSaveDraft = () => submitPost("draft");
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || [])
-    setMediaFiles([...mediaFiles, ...files])
-  }
-  
+    const files = Array.from(e.target.files || []);
+    files.forEach((file) => void uploadFile(file));
+    // Reset input so re-selecting the same file re-triggers change
+    e.target.value = "";
+  };
+
   const togglePlatform = (platform: string) => {
     if (selectedPlatforms.includes(platform)) {
-      removePlatform(platform)
+      removePlatform(platform);
     } else {
-      addPlatform(platform)
+      addPlatform(platform);
     }
-  }
-  
+  };
+
   return (
     <div className="space-y-4">
       <Textarea
@@ -132,14 +153,14 @@ export function PostComposer() {
         onChange={(e) => setContent(e.target.value)}
         className="min-h-[150px] text-lg"
       />
-      
+
       <div className="flex items-center justify-between text-sm text-muted-foreground">
         <span>
           {characterCount} / {currentLimit}
-          {characterCount > currentLimit && ' (exceeds limit)'}
+          {characterCount > currentLimit && " (exceeds limit)"}
         </span>
       </div>
-      
+
       <div className="flex flex-wrap gap-2">
         {Object.keys(PLATFORM_LIMITS).map((platform) => (
           <button
@@ -148,15 +169,15 @@ export function PostComposer() {
             onClick={() => togglePlatform(platform)}
             className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
               selectedPlatforms.includes(platform)
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                ? "bg-primary text-primary-foreground"
+                : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
             }`}
           >
             {platform.charAt(0).toUpperCase() + platform.slice(1)}
           </button>
         ))}
       </div>
-      
+
       <div className="border-2 border-dashed rounded-lg p-6">
         <input
           type="file"
@@ -174,51 +195,82 @@ export function PostComposer() {
             Click to upload images or videos
           </span>
         </label>
-        {mediaFiles.length > 0 && (
+        {mediaUploads.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-2">
-            {mediaFiles.map((file, index) => (
-              <div key={index} className="relative">
-                <span className="text-xs bg-secondary px-2 py-1 rounded">
-                  {file.name}
-                </span>
+            {mediaUploads.map((m) => (
+              <div
+                key={m.tempId}
+                className="flex items-center gap-2 bg-secondary px-2 py-1 rounded text-xs"
+              >
+                {m.status === "uploading" && (
+                  <Loader2
+                    className="w-3 h-3 animate-spin"
+                    aria-label="Uploading"
+                  />
+                )}
+                {m.status === "failed" && (
+                  <AlertCircle
+                    className="w-3 h-3 text-destructive"
+                    aria-label="Upload failed"
+                  />
+                )}
+                <span className="max-w-[180px] truncate">{m.file.name}</span>
+                {m.status === "uploading" && (
+                  <span className="text-muted-foreground">{m.progress}%</span>
+                )}
+                {m.status === "failed" && m.error && (
+                  <span className="text-destructive">{m.error}</span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => removeMediaUpload(m.tempId)}
+                  className="ml-1 hover:text-destructive"
+                  aria-label={`Remove ${m.file.name}`}
+                >
+                  <X className="w-3 h-3" />
+                </button>
               </div>
             ))}
           </div>
         )}
       </div>
-      
+
       <div className="flex items-center gap-2">
         <input
           type="datetime-local"
-          value={scheduledAt ? scheduledAt.toISOString().slice(0, 16) : ''}
-          onChange={(e) => setScheduledAt(e.target.value ? new Date(e.target.value) : null)}
+          value={scheduledAt ? scheduledAt.toISOString().slice(0, 16) : ""}
+          onChange={(e) =>
+            setScheduledAt(e.target.value ? new Date(e.target.value) : null)
+          }
           className="flex-1 px-3 py-2 border rounded-md"
         />
       </div>
-      
+
       <div className="flex gap-2">
         <Button
           onClick={handlePublish}
-          disabled={!canPublish || isSubmitting}
+          disabled={!canPublish || isSubmitting || hasUploadingMedia}
           className="flex-1"
         >
           <Send className="w-4 h-4 mr-2" />
           Publish Now
         </Button>
-        
+
         <Button
           onClick={handleSchedule}
-          disabled={!canPublish || !scheduledAt || isSubmitting}
+          disabled={
+            !canPublish || !scheduledAt || isSubmitting || hasUploadingMedia
+          }
           variant="outline"
           className="flex-1"
         >
           <Clock className="w-4 h-4 mr-2" />
           Schedule
         </Button>
-        
+
         <Button
           onClick={handleSaveDraft}
-          disabled={!content || isSubmitting}
+          disabled={!content || isSubmitting || hasUploadingMedia}
           variant="secondary"
           className="flex-1"
         >
@@ -227,5 +279,5 @@ export function PostComposer() {
         </Button>
       </div>
     </div>
-  )
+  );
 }

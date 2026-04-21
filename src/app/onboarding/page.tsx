@@ -1,68 +1,149 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function OnboardingPage() {
-  const router = useRouter()
-  const [step, setStep] = useState(1)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  
-  const [orgName, setOrgName] = useState('')
-  const [industry, setIndustry] = useState('')
-  const [teamSize, setTeamSize] = useState('')
-  const [language, setLanguage] = useState('en')
-  const [skipInvite, setSkipInvite] = useState(true)
+  const router = useRouter();
+  const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleNext = () => {
-    setError('')
+  const [orgName, setOrgName] = useState("");
+  const [industry, setIndustry] = useState("");
+  const [teamSize, setTeamSize] = useState("");
+  const [language, setLanguage] = useState("en");
+  const [skipInvite, setSkipInvite] = useState(true);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteSending, setInviteSending] = useState(false);
+  const [inviteMessage, setInviteMessage] = useState("");
+  const [orgId, setOrgId] = useState<string | null>(null);
+
+  const handleNext = async () => {
+    setError("");
     if (step === 1 && !orgName) {
-      setError('Organization name is required')
-      return
+      setError("Organization name is required");
+      return;
     }
     if (step === 4) {
-      handleSubmit()
-      return
+      if (!orgId) {
+        await createOrg();
+      } else {
+        router.push("/dashboard");
+      }
+      return;
     }
-    setStep(step + 1)
-  }
+    setStep(step + 1);
+  };
 
   const handleBack = () => {
-    setError('')
-    if (step > 1) setStep(step - 1)
-  }
+    setError("");
+    if (step > 1) setStep(step - 1);
+  };
 
-  const handleSubmit = async () => {
-    setLoading(true)
-    setError('')
+  const createOrg = async (): Promise<string | null> => {
+    setLoading(true);
+    setError("");
     try {
-      const response = await fetch('/api/orgs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/orgs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: orgName,
           industry: industry || undefined,
           team_size: teamSize || undefined,
           preferred_language: language,
         }),
-      })
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.error || 'Failed to create organization')
-      router.push('/dashboard')
+      });
+      const data = await response.json();
+      if (!response.ok)
+        throw new Error(data.error || "Failed to create organization");
+      setOrgId(data.organization.id);
+      router.push("/dashboard");
+      return data.organization.id;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create organization')
+      setError(
+        err instanceof Error ? err.message : "Failed to create organization",
+      );
+      return null;
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  const progress = (step / 4) * 100
+  const sendInvite = async () => {
+    setInviteMessage("");
+    setError("");
+    if (!EMAIL_RE.test(inviteEmail)) {
+      setError("Enter a valid email address");
+      return;
+    }
+    setInviteSending(true);
+    try {
+      // Create the org first if we haven't yet, so we can attach the invite to it.
+      let currentOrgId = orgId;
+      if (!currentOrgId) {
+        const response = await fetch("/api/orgs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: orgName,
+            industry: industry || undefined,
+            team_size: teamSize || undefined,
+            preferred_language: language,
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok)
+          throw new Error(data.error || "Failed to create organization");
+        currentOrgId = data.organization.id as string;
+        setOrgId(currentOrgId);
+      }
+
+      const inviteRes = await fetch(`/api/orgs/${currentOrgId}/members`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: inviteEmail, role: "editor" }),
+      });
+      const inviteData = await inviteRes.json();
+      if (!inviteRes.ok)
+        throw new Error(inviteData.error || "Failed to send invitation");
+      setInviteMessage(
+        inviteData.emailSent
+          ? `Invitation sent to ${inviteEmail}`
+          : `Invite created — share link: ${inviteData.inviteLink}`,
+      );
+      setInviteEmail("");
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to send invitation",
+      );
+    } finally {
+      setInviteSending(false);
+    }
+  };
+
+  const progress = (step / 4) * 100;
+  const isValidInviteEmail = EMAIL_RE.test(inviteEmail);
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
@@ -71,7 +152,10 @@ export default function OnboardingPage() {
           <CardTitle>Setup Your Organization</CardTitle>
           <CardDescription>Step {step} of 4</CardDescription>
           <div className="w-full bg-secondary h-2 rounded-full mt-4">
-            <div className="bg-primary h-2 rounded-full transition-all" style={{ width: `${progress}%` }} />
+            <div
+              className="bg-primary h-2 rounded-full transition-all"
+              style={{ width: `${progress}%` }}
+            />
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -171,10 +255,26 @@ export default function OnboardingPage() {
               </div>
               {!skipInvite && (
                 <div className="space-y-2">
-                  <Input placeholder="Enter email address" />
-                  <Button variant="outline" className="w-full" disabled>
-                    Send Invitation
+                  <Input
+                    type="email"
+                    placeholder="Enter email address"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    disabled={inviteSending}
+                  />
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    disabled={!isValidInviteEmail || inviteSending || !orgName}
+                    onClick={sendInvite}
+                  >
+                    {inviteSending ? "Sending…" : "Send Invitation"}
                   </Button>
+                  {inviteMessage && (
+                    <p className="text-sm text-muted-foreground">
+                      {inviteMessage}
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -187,7 +287,7 @@ export default function OnboardingPage() {
               </Button>
             )}
             <Button onClick={handleNext} disabled={loading} className="flex-1">
-              {loading ? 'Creating...' : step === 4 ? 'Complete Setup' : 'Next'}
+              {loading ? "Creating..." : step === 4 ? "Complete Setup" : "Next"}
             </Button>
           </div>
 
@@ -195,5 +295,5 @@ export default function OnboardingPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

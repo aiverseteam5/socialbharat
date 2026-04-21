@@ -1,16 +1,40 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
-import { useInboxStore, type InboxMessage } from "@/stores/inbox-store";
-import { useRealtime } from "./useRealtime";
+import { useCallback, useEffect, useRef } from "react";
+import { toast } from "sonner";
+import {
+  useInboxStore,
+  type InboxMessage,
+  type ConversationSummary,
+  type InboxFilters,
+} from "@/stores/inbox-store";
+import { useAuthStore } from "@/stores/auth-store";
+import { useRealtime, type RealtimeStatus } from "./useRealtime";
 import { logger } from "@/lib/logger";
 
 /**
  * Primary inbox data hook. Fetches the conversation list with current filters,
- * loads the selected conversation's messages, and subscribes to Realtime inserts
- * on the `messages` table so new incoming messages appear live.
+ * loads the selected conversation's messages, subscribes to Realtime inserts
+ * on the `messages` table so new incoming messages appear live, and subscribes
+ * to `conversations` updates to bump the list and show toast notifications.
  */
-export function useInbox() {
+export function useInbox(): {
+  conversations: ConversationSummary[];
+  selectedConversationId: string | null;
+  messages: InboxMessage[];
+  filters: InboxFilters;
+  isLoading: boolean;
+  realtimeStatus: RealtimeStatus;
+  selectConversation: (id: string | null) => void;
+  setFilters: (f: InboxFilters) => void;
+  sendReply: (
+    conversationId: string,
+    content: string,
+    mediaUrls?: string[],
+  ) => Promise<InboxMessage>;
+  refresh: () => Promise<void>;
+  upsertConversation: (c: ConversationSummary) => void;
+} {
   const {
     conversations,
     selectedConversationId,
@@ -25,6 +49,15 @@ export function useInbox() {
     setLoading,
     upsertConversation,
   } = useInboxStore();
+
+  const { currentOrg } = useAuthStore();
+  const orgId = (currentOrg as { id?: string } | null)?.id;
+
+  // Stable refs so callbacks don't capture stale closures
+  const selectedIdRef = useRef(selectedConversationId);
+  selectedIdRef.current = selectedConversationId;
+  const conversationsRef = useRef(conversations);
+  conversationsRef.current = conversations;
 
   const fetchConversations = useCallback(async () => {
     setLoading(true);
@@ -82,8 +115,8 @@ export function useInbox() {
     [appendMessage],
   );
 
-  // Subscribe to INSERTs on messages for the selected conversation.
-  useRealtime<InboxMessage>({
+  // Subscribe to INSERT on messages for the open conversation thread.
+  const { status: realtimeStatus } = useRealtime<InboxMessage>({
     table: "messages",
     event: "INSERT",
     filter: selectedConversationId
@@ -91,16 +124,31 @@ export function useInbox() {
       : undefined,
     enabled: Boolean(selectedConversationId),
     onInsert: (payload) => {
-      appendMessage(payload.new as InboxMessage);
+      appendMessage(payload.new);
     },
   });
 
-  // Any conversation update (new last_message_at, status change) refreshes list.
+  // Subscribe to conversation updates scoped to this org.
+  // Refresh the list and toast for messages on non-selected conversations.
   useRealtime({
     table: "conversations",
     event: "UPDATE",
-    onUpdate: () => {
+    filter: orgId ? `org_id=eq.${orgId}` : undefined,
+    onUpdate: (payload) => {
+      const updated = payload.new as { id?: string };
       void fetchConversations();
+
+      if (updated.id && updated.id !== selectedIdRef.current) {
+        const conv = conversationsRef.current.find((c) => c.id === updated.id);
+        const contactName =
+          conv?.contact?.display_name ??
+          conv?.contact?.platform_user_id ??
+          "Someone";
+        toast.message("New message", {
+          description: `${contactName} sent you a message`,
+          duration: 4000,
+        });
+      }
     },
   });
 
@@ -124,6 +172,7 @@ export function useInbox() {
     messages,
     filters,
     isLoading,
+    realtimeStatus,
     selectConversation,
     setFilters,
     sendReply,

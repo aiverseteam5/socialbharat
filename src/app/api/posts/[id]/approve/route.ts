@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { postApprovalSchema } from "@/types/schemas";
+import { sendNotificationVoid } from "@/lib/notifications/send";
 import { NextRequest, NextResponse } from "next/server";
 
 /**
@@ -54,7 +55,7 @@ export async function POST(
     // Verify post exists and belongs to org
     const { data: existingPost } = await supabase
       .from("posts")
-      .select("id, status")
+      .select("id, status, created_by")
       .eq("id", postId)
       .eq("org_id", orgId)
       .single();
@@ -98,6 +99,19 @@ export async function POST(
 
     if (approvalError) {
       throw approvalError;
+    }
+
+    if (existingPost.created_by) {
+      sendNotificationVoid({
+        userId: existingPost.created_by as string,
+        orgId,
+        type: "post_approved",
+        title: "Your post was approved",
+        body:
+          parsed.feedback ??
+          "Your post has been approved and is ready to schedule.",
+        link: `/publishing`,
+      });
     }
 
     return NextResponse.json({ post });

@@ -6,6 +6,8 @@ import { idParamSchema, inviteMemberSchema } from "@/types/schemas";
 import { serverTrack } from "@/lib/analytics-server";
 import { randomUUID } from "crypto";
 import { logger } from "@/lib/logger";
+import { sendInvitationEmail } from "@/lib/email";
+import { sendNotificationVoid } from "@/lib/notifications/send";
 
 export async function GET(
   request: NextRequest,
@@ -163,11 +165,42 @@ export async function POST(
 
     void serverTrack(user.id, "invited_user", { org_id: orgId, role });
 
+    sendNotificationVoid({
+      userId: user.id,
+      orgId,
+      type: "team_member_invited",
+      title: "Team member invited",
+      body: `Invitation sent to ${email ?? phone ?? "a new member"} as ${role}.`,
+      link: `/settings/team`,
+    });
+
     const inviteLink = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/invite/${token}`;
+
+    let emailSent = false;
+    if (email) {
+      const [{ data: org }, { data: inviter }] = await Promise.all([
+        supabase.from("organizations").select("name").eq("id", orgId).single(),
+        supabase
+          .from("users")
+          .select("full_name, email")
+          .eq("id", user.id)
+          .single(),
+      ]);
+
+      const result = await sendInvitationEmail({
+        to: email,
+        orgName: org?.name ?? "your team",
+        inviterName: inviter?.full_name ?? inviter?.email ?? "A teammate",
+        inviteLink,
+        role,
+      });
+      emailSent = result.sent;
+    }
 
     return NextResponse.json({
       invitation,
       inviteLink,
+      emailSent,
     });
   } catch (error) {
     if (error instanceof Error) {

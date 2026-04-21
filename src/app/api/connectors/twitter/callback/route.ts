@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { encrypt } from "@/lib/encryption";
 import { verifyState } from "@/lib/oauth-state";
+import { consumePkceVerifier } from "@/lib/oauth-pkce";
 import { checkNumericLimit } from "@/lib/plan-limits";
 import { redirect } from "next/navigation";
 import { NextRequest } from "next/server";
@@ -29,6 +30,11 @@ export async function GET(request: NextRequest) {
     redirect("/dashboard/settings/social-accounts?error=invalid_state");
   }
 
+  const codeVerifier = await consumePkceVerifier("twitter");
+  if (!codeVerifier) {
+    redirect("/dashboard/settings/social-accounts?error=missing_pkce_verifier");
+  }
+
   try {
     const supabase = await createClient();
     const {
@@ -50,7 +56,7 @@ export async function GET(request: NextRequest) {
       grant_type: "authorization_code",
       client_id: clientId || "",
       redirect_uri: redirectUri,
-      code_verifier: "challenge",
+      code_verifier: codeVerifier,
     });
 
     const tokenResponse = await fetch(tokenUrl, {
