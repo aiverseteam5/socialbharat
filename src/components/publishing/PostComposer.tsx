@@ -5,6 +5,15 @@ import { usePublishing } from "@/hooks/usePublishing";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Send, Clock, Save, X, Loader2, AlertCircle } from "lucide-react";
+import {
+  FaWhatsapp,
+  FaInstagram,
+  FaFacebook,
+  FaLinkedin,
+  FaYoutube,
+  FaXTwitter,
+} from "react-icons/fa6";
+import type { IconType } from "react-icons";
 
 const PLATFORM_LIMITS: Record<string, number> = {
   twitter: 280,
@@ -13,6 +22,18 @@ const PLATFORM_LIMITS: Record<string, number> = {
   linkedin: 3000,
   youtube: 5000,
   whatsapp: 4096,
+};
+
+const PLATFORM_META: Record<
+  string,
+  { Icon: IconType; color: string; label: string }
+> = {
+  twitter: { Icon: FaXTwitter, color: "#000000", label: "Twitter/X" },
+  facebook: { Icon: FaFacebook, color: "#1877F2", label: "Facebook" },
+  instagram: { Icon: FaInstagram, color: "#E1306C", label: "Instagram" },
+  linkedin: { Icon: FaLinkedin, color: "#0A66C2", label: "LinkedIn" },
+  youtube: { Icon: FaYoutube, color: "#FF0000", label: "YouTube" },
+  whatsapp: { Icon: FaWhatsapp, color: "#25D366", label: "WhatsApp" },
 };
 
 export function PostComposer() {
@@ -162,20 +183,35 @@ export function PostComposer() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {Object.keys(PLATFORM_LIMITS).map((platform) => (
-          <button
-            key={platform}
-            type="button"
-            onClick={() => togglePlatform(platform)}
-            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              selectedPlatforms.includes(platform)
-                ? "bg-primary text-primary-foreground"
-                : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-            }`}
-          >
-            {platform.charAt(0).toUpperCase() + platform.slice(1)}
-          </button>
-        ))}
+        {Object.keys(PLATFORM_LIMITS).map((platform) => {
+          const meta = PLATFORM_META[platform];
+          if (!meta) return null;
+          const selected = selectedPlatforms.includes(platform);
+          return (
+            <button
+              key={platform}
+              type="button"
+              onClick={() => togglePlatform(platform)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors border ${
+                selected
+                  ? "border-transparent text-white"
+                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+              }`}
+              style={
+                selected
+                  ? { backgroundColor: meta.color, borderColor: meta.color }
+                  : {}
+              }
+            >
+              <meta.Icon
+                size={14}
+                color={selected ? "#fff" : meta.color}
+                aria-hidden
+              />
+              {meta.label}
+            </button>
+          );
+        })}
       </div>
 
       <div className="border-2 border-dashed rounded-lg p-6">

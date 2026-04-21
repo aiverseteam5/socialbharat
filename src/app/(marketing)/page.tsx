@@ -11,6 +11,14 @@ import {
   PenLine,
   Rocket,
 } from "lucide-react";
+import {
+  FaWhatsapp,
+  FaInstagram,
+  FaFacebook,
+  FaLinkedin,
+  FaYoutube,
+} from "react-icons/fa6";
+import { FaXTwitter } from "react-icons/fa6";
 
 export const metadata: Metadata = {
   title: "SocialBharat — India's AI Social Media Management Platform",
@@ -115,13 +123,40 @@ function Hero() {
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               Publish to all platforms from one place
             </p>
-            <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-3 text-slate-400">
-              <PlatformLabel emoji="💬" label="WhatsApp" />
-              <PlatformLabel emoji="📸" label="Instagram" />
-              <PlatformLabel emoji="👍" label="Facebook" />
-              <PlatformLabel emoji="🐦" label="Twitter" />
-              <PlatformLabel emoji="💼" label="LinkedIn" />
-              <PlatformLabel emoji="▶️" label="YouTube" />
+            <div className="mt-3 flex items-center gap-5">
+              <PlatformIcon
+                Icon={FaWhatsapp}
+                color="#25D366"
+                label="WhatsApp"
+              />
+              <PlatformIcon
+                Icon={FaInstagram}
+                color="#E1306C"
+                label="Instagram"
+              />
+              <PlatformIcon
+                Icon={FaFacebook}
+                color="#1877F2"
+                label="Facebook"
+              />
+              <PlatformIcon
+                Icon={FaXTwitter}
+                color="#000000"
+                label="Twitter/X"
+                className="hidden sm:flex"
+              />
+              <PlatformIcon
+                Icon={FaLinkedin}
+                color="#0A66C2"
+                label="LinkedIn"
+                className="hidden sm:flex"
+              />
+              <PlatformIcon
+                Icon={FaYoutube}
+                color="#FF0000"
+                label="YouTube"
+                className="hidden sm:flex"
+              />
             </div>
           </div>
         </div>
@@ -134,11 +169,27 @@ function Hero() {
   );
 }
 
-function PlatformLabel({ emoji, label }: { emoji: string; label: string }) {
+function PlatformIcon({
+  Icon,
+  color,
+  label,
+  className = "",
+}: {
+  Icon: React.ComponentType<{
+    size?: number;
+    color?: string;
+    "aria-label"?: string;
+  }>;
+  color: string;
+  label: string;
+  className?: string;
+}) {
   return (
-    <span className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 grayscale">
-      <span aria-hidden>{emoji}</span>
-      {label}
+    <span
+      title={label}
+      className={`inline-flex grayscale transition-all duration-200 hover:grayscale-0 ${className}`}
+    >
+      <Icon size={32} color={color} aria-label={label} />
     </span>
   );
 }
