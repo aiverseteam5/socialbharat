@@ -37,8 +37,13 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: '22', cache: 'pnpm' }
       - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+        env:
+          SKIP_ENV_VALIDATION: true
       - run: pnpm dlx playwright install --with-deps
       - run: pnpm e2e             # Playwright critical path tests
+        env:
+          SKIP_ENV_VALIDATION: true
 
   deploy-preview:
     needs: quality
