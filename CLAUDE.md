@@ -48,6 +48,10 @@ specs/                    — Requirements, solution design, plan, tasks
 - All user-facing text must support i18n (use translation keys, not hardcoded strings).
 - Phone-first auth pattern: Indian users prefer OTP over email/password.
 - Background jobs, crons, and webhook handlers: ALWAYS use createServiceClient(). Never createClient(). There is no user session in these contexts.
+- Never change the database schema without a corresponding Supabase migration file.
+- Every PR must pass: `pnpm type-check && pnpm test && pnpm build`
+- Never remove a passing test. If a refactor breaks a test, fix the test — do not delete it.
+- All secrets go through `src/lib/env.ts` Zod validation ,never raw `process.env` in business logic.
 
 ## India-Specific Requirements
 

@@ -1,6 +1,11 @@
-import { createClient } from '@/lib/supabase/server'
-import { updatePostSchema } from '@/types/schemas'
-import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from "@/lib/supabase/server";
+import { updatePostSchema } from "@/types/schemas";
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+
+const rescheduleSchema = z.object({
+  scheduled_at: z.string().datetime({ message: "Valid ISO datetime required" }),
+});
 
 /**
  * GET /api/posts/[id]
@@ -8,55 +13,62 @@ import { NextRequest, NextResponse } from 'next/server'
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const { id } = await params
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    
+    const { id } = await params;
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    
-    const postId = id
-    
+
+    const postId = id;
+
     // Get user's organization
     const { data: orgMember } = await supabase
-      .from('org_members')
-      .select('org_id')
-      .eq('user_id', user.id)
+      .from("org_members")
+      .select("org_id")
+      .eq("user_id", user.id)
       .limit(1)
-      .single()
-    
+      .single();
+
     if (!orgMember) {
-      return NextResponse.json({ error: 'No organization found' }, { status: 400 })
+      return NextResponse.json(
+        { error: "No organization found" },
+        { status: 400 },
+      );
     }
-    
-    const orgId = orgMember.org_id
-    
+
+    const orgId = orgMember.org_id;
+
     // Fetch post
     const { data: post, error } = await supabase
-      .from('posts')
-      .select('*')
-      .eq('id', postId)
-      .eq('org_id', orgId)
-      .single()
-    
+      .from("posts")
+      .select("*")
+      .eq("id", postId)
+      .eq("org_id", orgId)
+      .single();
+
     if (error) {
-      throw error
+      throw error;
     }
-    
+
     if (!post) {
-      return NextResponse.json({ error: 'Post not found' }, { status: 404 })
+      return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
-    
-    return NextResponse.json({ post })
+
+    return NextResponse.json({ post });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to fetch post' },
-      { status: 500 }
-    )
+      {
+        error: error instanceof Error ? error.message : "Failed to fetch post",
+      },
+      { status: 500 },
+    );
   }
 }
 
@@ -66,83 +78,98 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const { id } = await params
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    
+    const { id } = await params;
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    
-    const postId = id
-    const body = await request.json()
-    const parsed = updatePostSchema.parse(body)
-    
+
+    const postId = id;
+    const body = await request.json();
+    const parsed = updatePostSchema.parse(body);
+
     // Get user's organization
     const { data: orgMember } = await supabase
-      .from('org_members')
-      .select('org_id')
-      .eq('user_id', user.id)
+      .from("org_members")
+      .select("org_id")
+      .eq("user_id", user.id)
       .limit(1)
-      .single()
-    
+      .single();
+
     if (!orgMember) {
-      return NextResponse.json({ error: 'No organization found' }, { status: 400 })
+      return NextResponse.json(
+        { error: "No organization found" },
+        { status: 400 },
+      );
     }
-    
-    const orgId = orgMember.org_id
-    
+
+    const orgId = orgMember.org_id;
+
     // Check if post exists and is editable
     const { data: existingPost } = await supabase
-      .from('posts')
-      .select('status')
-      .eq('id', postId)
-      .eq('org_id', orgId)
-      .single()
-    
+      .from("posts")
+      .select("status")
+      .eq("id", postId)
+      .eq("org_id", orgId)
+      .single();
+
     if (!existingPost) {
-      return NextResponse.json({ error: 'Post not found' }, { status: 404 })
+      return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
-    
-    if (existingPost.status !== 'draft' && existingPost.status !== 'rejected') {
-      return NextResponse.json({ error: 'Can only update draft or rejected posts' }, { status: 400 })
+
+    if (existingPost.status !== "draft" && existingPost.status !== "rejected") {
+      return NextResponse.json(
+        { error: "Can only update draft or rejected posts" },
+        { status: 400 },
+      );
     }
-    
+
     // Update post
     const { data: post, error } = await supabase
-      .from('posts')
+      .from("posts")
       .update({
         content: parsed.content,
         content_json: parsed.content_json,
         media_urls: parsed.media_urls,
         platforms: parsed.platforms,
-        scheduled_at: parsed.scheduled_at ? new Date(parsed.scheduled_at) : null,
+        scheduled_at: parsed.scheduled_at
+          ? new Date(parsed.scheduled_at)
+          : null,
         campaign_id: parsed.campaign_id,
         tags: parsed.tags,
         language: parsed.language,
         festival_context: parsed.festival_context,
         updated_at: new Date(),
       })
-      .eq('id', postId)
+      .eq("id", postId)
       .select()
-      .single()
-    
+      .single();
+
     if (error) {
-      throw error
+      throw error;
     }
-    
-    return NextResponse.json({ post })
+
+    return NextResponse.json({ post });
   } catch (error) {
-    if (error instanceof Error && error.name === 'ZodError') {
-      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+    if (error instanceof Error && error.name === "ZodError") {
+      return NextResponse.json(
+        { error: "Invalid request body" },
+        { status: 400 },
+      );
     }
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to update post' },
-      { status: 500 }
-    )
+      {
+        error: error instanceof Error ? error.message : "Failed to update post",
+      },
+      { status: 500 },
+    );
   }
 }
 
@@ -152,60 +179,152 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const { id } = await params
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    
+    const { id } = await params;
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    
-    const postId = id
-    
+
+    const postId = id;
+
     // Get user's organization
     const { data: orgMember } = await supabase
-      .from('org_members')
-      .select('org_id')
-      .eq('user_id', user.id)
+      .from("org_members")
+      .select("org_id")
+      .eq("user_id", user.id)
       .limit(1)
-      .single()
-    
+      .single();
+
     if (!orgMember) {
-      return NextResponse.json({ error: 'No organization found' }, { status: 400 })
+      return NextResponse.json(
+        { error: "No organization found" },
+        { status: 400 },
+      );
     }
-    
-    const orgId = orgMember.org_id
-    
+
+    const orgId = orgMember.org_id;
+
     // Verify post belongs to org
     const { data: existingPost } = await supabase
-      .from('posts')
-      .select('id')
-      .eq('id', postId)
-      .eq('org_id', orgId)
-      .single()
-    
+      .from("posts")
+      .select("id")
+      .eq("id", postId)
+      .eq("org_id", orgId)
+      .single();
+
     if (!existingPost) {
-      return NextResponse.json({ error: 'Post not found' }, { status: 404 })
+      return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
-    
+
     // Delete post
-    const { error } = await supabase
-      .from('posts')
-      .delete()
-      .eq('id', postId)
-    
+    const { error } = await supabase.from("posts").delete().eq("id", postId);
+
     if (error) {
-      throw error
+      throw error;
     }
-    
-    return NextResponse.json({ success: true })
+
+    return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to delete post' },
-      { status: 500 }
-    )
+      {
+        error: error instanceof Error ? error.message : "Failed to delete post",
+      },
+      { status: 500 },
+    );
+  }
+}
+
+/**
+ * PATCH /api/posts/[id]
+ * Reschedule a post (drag-and-drop calendar). Updates scheduled_at for draft or scheduled posts.
+ */
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const { id } = await params;
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const parsed = rescheduleSchema.parse(body);
+
+    const { data: orgMember } = await supabase
+      .from("org_members")
+      .select("org_id")
+      .eq("user_id", user.id)
+      .limit(1)
+      .single();
+
+    if (!orgMember) {
+      return NextResponse.json(
+        { error: "No organization found" },
+        { status: 400 },
+      );
+    }
+
+    const { data: existingPost } = await supabase
+      .from("posts")
+      .select("status")
+      .eq("id", id)
+      .eq("org_id", orgMember.org_id)
+      .single();
+
+    if (!existingPost) {
+      return NextResponse.json({ error: "Post not found" }, { status: 404 });
+    }
+
+    if (
+      existingPost.status === "published" ||
+      existingPost.status === "failed"
+    ) {
+      return NextResponse.json(
+        { error: "Cannot reschedule published or failed posts" },
+        { status: 400 },
+      );
+    }
+
+    const { data: post, error } = await supabase
+      .from("posts")
+      .update({
+        scheduled_at: new Date(parsed.scheduled_at),
+        status: "scheduled",
+        updated_at: new Date(),
+      })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return NextResponse.json({ post });
+  } catch (error) {
+    if (error instanceof Error && error.name === "ZodError") {
+      return NextResponse.json(
+        { error: "Invalid request body" },
+        { status: 400 },
+      );
+    }
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error ? error.message : "Failed to reschedule post",
+      },
+      { status: 500 },
+    );
   }
 }
