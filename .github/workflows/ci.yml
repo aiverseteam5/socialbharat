@@ -24,6 +24,9 @@ jobs:
       - run: pnpm build           # Production build must succeed
         env:
           SKIP_ENV_VALIDATION: true
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
 
   e2e:
     needs: quality
@@ -40,10 +43,15 @@ jobs:
       - run: pnpm build
         env:
           SKIP_ENV_VALIDATION: true
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
       - run: pnpm dlx playwright install --with-deps
       - run: pnpm e2e             # Playwright critical path tests
         env:
           SKIP_ENV_VALIDATION: true
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
   deploy-preview:
     needs: quality
