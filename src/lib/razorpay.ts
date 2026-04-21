@@ -8,10 +8,17 @@ import { logger } from "@/lib/logger";
  * RAZORPAY_KEY_SECRET must NEVER appear in any client-side file.
  */
 
-const razorpayInstance = new Razorpay({
-  key_id: env.RAZORPAY_KEY_ID,
-  key_secret: env.RAZORPAY_KEY_SECRET,
-});
+let razorpayInstance: Razorpay | null = null;
+
+function getRazorpay(): Razorpay {
+  if (!razorpayInstance) {
+    razorpayInstance = new Razorpay({
+      key_id: env.RAZORPAY_KEY_ID,
+      key_secret: env.RAZORPAY_KEY_SECRET,
+    });
+  }
+  return razorpayInstance;
+}
 
 export interface CreateOrderParams {
   amount: number; // paise (integer)
@@ -52,7 +59,7 @@ export async function createOrder(
   };
 
   try {
-    const order = await razorpayInstance.orders.create(options);
+    const order = await getRazorpay().orders.create(options);
     return order as RazorpayOrder;
   } catch (error) {
     logger.error("Razorpay order creation failed", error, { orgId });
@@ -106,7 +113,7 @@ export async function cancelSubscription(
   subscriptionId: string,
   cancelAtCycleEnd = true,
 ): Promise<{ status: string; current_end: number | null }> {
-  const sub = await razorpayInstance.subscriptions.cancel(
+  const sub = await getRazorpay().subscriptions.cancel(
     subscriptionId,
     cancelAtCycleEnd,
   );
