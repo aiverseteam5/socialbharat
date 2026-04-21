@@ -119,10 +119,16 @@ function formatEnvError(error: z.ZodError): string {
   return `Missing or invalid environment variables:\n${lines.join("\n")}`;
 }
 
-const result = schema.safeParse(process.env);
-
-if (!result.success) {
-  throw new Error(formatEnvError(result.error));
+// Allow CI builds to skip validation (no real secrets available in CI).
+// Set SKIP_ENV_VALIDATION=true in the workflow build step only — never in production.
+if (process.env.SKIP_ENV_VALIDATION !== "true") {
+  const result = schema.safeParse(process.env);
+  if (!result.success) {
+    throw new Error(formatEnvError(result.error));
+  }
 }
 
-export const env = result.data;
+const result = schema.safeParse(process.env);
+export const env = (result.success ? result.data : {}) as z.infer<
+  typeof schema
+>;

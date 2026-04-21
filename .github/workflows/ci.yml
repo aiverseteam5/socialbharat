@@ -22,6 +22,8 @@ jobs:
       - run: pnpm type-check      # tsc --noEmit must exit 0
       - run: pnpm test:coverage   # Vitest — 80% floor
       - run: pnpm build           # Production build must succeed
+        env:
+          SKIP_ENV_VALIDATION: true
 
   e2e:
     needs: quality
