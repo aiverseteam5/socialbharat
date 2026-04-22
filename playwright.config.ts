@@ -31,6 +31,13 @@ export default defineConfig({
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
-    env: process.env.CI ? { SKIP_ENV_VALIDATION: "true" } : {},
+    // Forward the full parent env (NEXT_PUBLIC_SUPABASE_*, PATH, etc.) so the
+    // started Next.js process sees the same config CI built with.
+    env: process.env.CI
+      ? ({
+          ...process.env,
+          SKIP_ENV_VALIDATION: "true",
+        } as Record<string, string>)
+      : {},
   },
 });

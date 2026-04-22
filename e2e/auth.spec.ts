@@ -24,7 +24,11 @@ test.describe("Auth flows", () => {
   test("register page renders correctly", async ({ page }) => {
     await page.goto("/register");
     await expect(page.getByRole("heading").first()).toBeVisible();
-    // At least one input field should be present
+    // Step 0 is a path-selection wizard (Individual vs Team) — no inputs yet.
+    await expect(page.getByText(/Choose your path/i)).toBeVisible();
+    // Advance past step 0 to confirm the signup form still renders.
+    await page.getByRole("button", { name: /Individual|Creator/i }).click();
+    await page.getByRole("button", { name: /^Continue/i }).click();
     await expect(page.locator("input").first()).toBeVisible();
   });
 

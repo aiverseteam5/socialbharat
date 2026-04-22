@@ -2,6 +2,26 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
+// All top-level paths served by the (dashboard) route group. Route groups
+// don't appear in URLs, so these must be enumerated explicitly.
+const PROTECTED_PREFIXES = [
+  "/dashboard",
+  "/inbox",
+  "/publishing",
+  "/settings",
+  "/analytics",
+  "/media",
+  "/listening",
+  "/whatsapp",
+  "/onboarding",
+];
+
+function isProtectedPath(pathname: string): boolean {
+  return PROTECTED_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(prefix + "/"),
+  );
+}
+
 export async function middleware(request: NextRequest) {
   const { response, user } = await updateSession(request);
   const { pathname } = request.nextUrl;
@@ -11,8 +31,8 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
-  // Protect /dashboard/* — redirect unauthenticated users to /login
-  if (pathname.startsWith("/dashboard") && !user) {
+  // Protect all (dashboard) route-group paths — redirect unauthenticated users to /login
+  if (isProtectedPath(pathname) && !user) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
