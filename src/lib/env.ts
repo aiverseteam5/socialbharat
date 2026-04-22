@@ -119,9 +119,17 @@ function formatEnvError(error: z.ZodError): string {
   return `Missing or invalid environment variables:\n${lines.join("\n")}`;
 }
 
-// Allow CI builds to skip validation (no real secrets available in CI).
-// Set SKIP_ENV_VALIDATION=true in the workflow build step only — never in production.
-if (process.env.SKIP_ENV_VALIDATION !== "true") {
+// Skip validation during:
+//   - CI builds (SKIP_ENV_VALIDATION=true) where real secrets aren't available
+//   - Next.js production build phase — route modules are imported to collect
+//     page data, but secrets aren't always hydrated at build time on Vercel
+//     (e.g. vars scoped only to runtime). Runtime validation still fires on
+//     first import at cold start, preserving fail-fast behavior in production.
+const skipValidation =
+  process.env.SKIP_ENV_VALIDATION === "true" ||
+  process.env.NEXT_PHASE === "phase-production-build";
+
+if (!skipValidation) {
   const result = schema.safeParse(process.env);
   if (!result.success) {
     throw new Error(formatEnvError(result.error));
