@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { env } from "@/lib/env";
 import { serverTrack } from "@/lib/analytics-server";
 import { logger } from "@/lib/logger";
 
@@ -47,6 +48,8 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient();
 
     if (phone) {
+      // Phone OTP flow: user row already exists (created during OTP send).
+      // Registration is just filling in profile details.
       const { data: existing, error: findErr } = await supabase
         .from("users")
         .select("id")
@@ -82,7 +85,7 @@ export async function POST(request: NextRequest) {
         auth_method: "otp",
       });
 
-      return NextResponse.json({ userId: existing.id });
+      return NextResponse.json({ userId: existing.id, verified: true });
     }
 
     if (!email || !password) {
@@ -92,29 +95,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const svc = createServiceClient();
-    const { data: authData, error: signUpErr } =
-      await svc.auth.admin.createUser({
-        email,
-        password,
-        email_confirm: true,
-        user_metadata: { full_name, account_type },
-      });
+    // Email + password flow: use Supabase signUp so the user receives a real
+    // verification email. Session will not be active until they click the
+    // link. After click, Supabase redirects to emailRedirectTo → our callback
+    // which sets email_verified_at and routes by account_type.
+    const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${env.NEXT_PUBLIC_APP_URL}/api/auth/callback?account_type=${account_type}`,
+        data: { full_name, account_type },
+      },
+    });
 
-    if (signUpErr || !authData.user) {
-      logger.error("Register (email): admin.createUser failed", signUpErr, {
-        email,
-      });
+    if (signUpErr || !signUpData.user) {
+      logger.error("Register (email): signUp failed", signUpErr, { email });
       return NextResponse.json(
         { error: signUpErr?.message || "Failed to create account." },
         { status: 400 },
       );
     }
 
-    const userId = authData.user.id;
+    const userId = signUpData.user.id;
 
-    // Upsert — a DB trigger may have already created the row when auth.users
-    // was inserted by admin.createUser. Use upsert to avoid a 409 conflict.
+    // Insert the public.users row now so profile is ready when the user
+    // verifies. email_verified_at remains null until the callback runs.
+    const svc = createServiceClient();
     const { error: insertErr } = await svc.from("users").upsert(
       {
         id: userId,
@@ -130,6 +136,7 @@ export async function POST(request: NextRequest) {
           whatsapp: false,
           sms: false,
         },
+        email_verified_at: null,
       },
       { onConflict: "id" },
     );
@@ -144,11 +151,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    void serverTrack(userId, "registration_completed", {
+    void serverTrack(userId, "registration_started", {
       auth_method: "email",
     });
 
-    return NextResponse.json({ userId });
+    return NextResponse.json({
+      userId,
+      email,
+      verified: false,
+      message: "Check your inbox for a verification link.",
+    });
   } catch (error) {
     logger.error("POST /api/auth/register failed", error);
     return NextResponse.json(

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Menu } from "lucide-react";
@@ -39,15 +40,15 @@ export function MarketingNavbar() {
       ].join(" ")}
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
-        <Link
-          href="/"
-          className="flex items-center gap-1.5 text-xl font-bold tracking-tight"
-        >
-          <span className="text-slate-800">Social</span>
-          <span style={{ color: "#FF6B35" }}>Bharat</span>
-          <span aria-hidden className="text-base">
-            🇮🇳
-          </span>
+        <Link href="/" className="flex items-center">
+          <Image
+            src="/logo.svg"
+            alt="SocialBharat"
+            width={180}
+            height={36}
+            priority
+            className="h-8 w-auto"
+          />
         </Link>
 
         <nav className="hidden items-center gap-8 md:flex">
@@ -87,8 +88,13 @@ export function MarketingNavbar() {
             <SheetContent side="right" className="w-[260px]">
               <SheetHeader>
                 <SheetTitle>
-                  <span className="text-slate-800">Social</span>
-                  <span style={{ color: "#FF6B35" }}>Bharat</span>
+                  <Image
+                    src="/logo.svg"
+                    alt="SocialBharat"
+                    width={160}
+                    height={32}
+                    className="h-7 w-auto"
+                  />
                 </SheetTitle>
               </SheetHeader>
               <div className="mt-6 flex flex-col gap-1">

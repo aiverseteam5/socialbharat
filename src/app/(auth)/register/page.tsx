@@ -3,14 +3,14 @@
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { User, Building2, Check, ArrowRight, Mail } from "lucide-react";
+import { User, Building2, Check, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 
 type AccountType = "individual" | "team";
-type Step = 0 | 1 | 2;
+type Step = 0 | 1;
 
 const ORANGE = "#FF6B35";
 
@@ -54,8 +54,8 @@ function RegisterPageInner() {
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/api/auth/callback`,
-        queryParams: { account_type: accountType },
+        redirectTo: `${window.location.origin}/api/auth/callback?account_type=${accountType}`,
+        queryParams: { access_type: "offline", prompt: "consent" },
       },
     });
   };
@@ -77,7 +77,8 @@ function RegisterPageInner() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Registration failed");
-      setStep(2);
+      // Email verification required: send user to verify-email page.
+      router.push(`/verify-email?email=${encodeURIComponent(email)}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed");
     } finally {
@@ -92,7 +93,7 @@ function RegisterPageInner() {
         onSelect={setAccountType}
         onContinue={handleContinueFromPath}
       />
-    ) : step === 1 ? (
+    ) : (
       <SignUpForm
         accountType={accountType!}
         fullName={fullName}
@@ -106,11 +107,6 @@ function RegisterPageInner() {
         onRegister={handleRegister}
         onGoogle={handleGoogleSignIn}
         onBack={() => setStep(0)}
-      />
-    ) : (
-      <AccountCreatedScreen
-        accountType={accountType!}
-        onContinue={() => router.push("/onboarding")}
       />
     );
 
@@ -376,54 +372,6 @@ function SignUpForm({
         >
           Sign in
         </Link>
-      </p>
-    </div>
-  );
-}
-
-// ---------- Step 2: Account Created ----------
-
-function AccountCreatedScreen({
-  accountType,
-  onContinue,
-}: {
-  accountType: AccountType;
-  onContinue: () => void;
-}) {
-  return (
-    <div className="max-w-md mx-auto space-y-6 text-center">
-      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-orange-100">
-        <Mail className="h-8 w-8" style={{ color: ORANGE }} />
-      </div>
-
-      <div>
-        <h2 className="text-xl font-bold text-slate-900">Account created!</h2>
-        <p className="mt-2 text-sm text-slate-500">
-          We&apos;ve sent a confirmation link to your email. Check your inbox
-          and verify your address to activate your account.
-        </p>
-      </div>
-
-      <Button
-        className="w-full gap-2 font-semibold text-white"
-        style={{ backgroundColor: ORANGE }}
-        onClick={onContinue}
-      >
-        {accountType === "team"
-          ? "Continue to Workspace Setup"
-          : "Go to Dashboard"}
-        <ArrowRight className="h-4 w-4" />
-      </Button>
-
-      <p className="text-xs text-slate-400">
-        Didn&apos;t receive an email?{" "}
-        <button
-          type="button"
-          className="font-medium text-slate-600 hover:underline"
-          onClick={onContinue}
-        >
-          Continue anyway
-        </button>
       </p>
     </div>
   );

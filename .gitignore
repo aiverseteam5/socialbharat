@@ -11,4 +11,9 @@ playwright-report/
 .supabase/
 supabase/.temp/
 .claude/
+tmp-fonts/
 
+.vercel
+
+# Sentry wizard install error logs
+sentry-wizard-installation-error-*.log
