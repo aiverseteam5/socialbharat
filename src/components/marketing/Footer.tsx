@@ -13,13 +13,12 @@ const COMPANY = [
   { label: "Blog", href: "#" },
   { label: "Careers", href: "#" },
   { label: "Press", href: "#" },
-  { label: "Contact", href: "mailto:hello@socialbharat.ai" },
+  { label: "Contact", href: "mailto:contact@tynkai.com" },
 ];
 const LEGAL = [
-  { label: "Privacy Policy", href: "#" },
-  { label: "Terms of Service", href: "#" },
-  { label: "Cookie Policy", href: "#" },
-  { label: "DPDP Compliance", href: "#" },
+  { label: "Privacy Policy", href: "/privacy" },
+  { label: "Terms of Service", href: "/terms" },
+  { label: "Data Deletion", href: "/data-deletion" },
 ];
 
 export function MarketingFooter() {
