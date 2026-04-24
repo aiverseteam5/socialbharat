@@ -7,7 +7,7 @@
 Name: SocialBharat
 Purpose: AI-powered, India-first social media management platform (reverse-engineering Sprout Social & Hootsuite with Indian market enhancements)
 Stack: Next.js 15 App Router | TypeScript strict | Tailwind CSS v3.4 | shadcn/ui
-Supabase (Postgres + Auth + Storage) | Razorpay (payments) | Resend (email) | Vercel
+Supabase (Postgres + Auth + Storage) | Razorpay (payments) | Resend (email) | Hostinger VPS (PM2 + Nginx)
 
 ## Directory Structure
 
@@ -148,6 +148,17 @@ SENTRY_DSN
 6. **Edge functions** for performance-critical paths (API gateway, rate limiting).
 7. **Supabase Realtime** for live inbox updates (instead of custom WebSocket server).
 8. **ClickHouse** deferred to Phase 4 — use Supabase Postgres for analytics MVP.
+
+## Deployment
+
+- **Host:** Hostinger VPS (single node, path `/var/www/socialbharat`)
+- **Server:** PM2 cluster mode — 2 web instances (`.next/standalone/server.js`) + 1 worker (enabled in V3 Phase 3B)
+- **Proxy:** Nginx with Let's Encrypt SSL. Security headers are owned by `next.config.ts`; nginx only handles TLS, gzip, static assets, and proxy.
+- **Redis:** Self-hosted at `redis://localhost:6379` (used by BullMQ starting in 3B). Upstash REST remains the source for rate-limiting (`src/lib/ratelimit.ts`).
+- **Scheduler:** VPS `crontab` hits `/api/cron/*` with `CRON_SECRET`; see `deploy/CRONTAB.md`. Replaces Vercel Cron.
+- **Deploy flow:** `git push main` → GitHub Actions (`deploy.yml`) → build + test → SSH to VPS → `git reset --hard` + `pnpm install` + `pnpm build` + `pm2 reload` → `supabase db push --linked`.
+- **Logs:** `pm2 logs socialbharat-web`, plus `/var/log/pm2/*.log`.
+- **First-time provisioning:** `deploy/setup-vps.sh`. Required GitHub secrets: `deploy/GITHUB_SECRETS.md`.
 
 ## Agent Workflow
 
