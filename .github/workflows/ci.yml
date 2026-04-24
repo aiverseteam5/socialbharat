@@ -53,19 +53,3 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
-  deploy-preview:
-    needs: quality
-    # Gated on repo variable ENABLE_VERCEL_DEPLOY=true. To enable previews:
-    #   1. Add secrets VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
-    #   2. Add repo variable ENABLE_VERCEL_DEPLOY=true
-    # Tracked as P4-INFRA-01 (vercel.json cron also blocks Hobby deploys).
-    if: github.event_name == 'pull_request' && vars.ENABLE_VERCEL_DEPLOY == 'true'
-    runs-on: ubuntu-latest
-    env:
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-    steps:
-      - uses: actions/checkout@v4
-      - run: npx vercel pull --yes --token=${{ secrets.VERCEL_TOKEN }}
-      - run: npx vercel build --token=${{ secrets.VERCEL_TOKEN }}
-      - run: npx vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
