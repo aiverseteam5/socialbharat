@@ -68,7 +68,7 @@ function getStatusColor(status: string): string {
     case "scheduled":
       return "bg-blue-500";
     case "published":
-      return "bg-green-500";
+      return "bg-emerald-500";
     case "failed":
       return "bg-red-500";
     default:
@@ -387,7 +387,7 @@ export function ContentCalendar({
                 <button
                   key={f.id}
                   onClick={() => onFestivalClick?.(f)}
-                  className="w-full text-left text-[10px] px-1 py-0.5 rounded bg-orange-100 text-orange-700 hover:bg-orange-200 transition-colors truncate font-medium"
+                  className="w-full text-left text-[10px] px-1 py-0.5 rounded bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors truncate font-medium"
                 >
                   🎉 {f.name}
                 </button>
@@ -457,7 +457,7 @@ export function ContentCalendar({
                       <button
                         key={f.id}
                         onClick={() => onFestivalClick?.(f)}
-                        className="w-full text-[10px] px-1 py-0.5 rounded bg-orange-100 text-orange-700 hover:bg-orange-200 transition-colors truncate font-medium"
+                        className="w-full text-[10px] px-1 py-0.5 rounded bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors truncate font-medium"
                       >
                         🎉 {f.name}
                       </button>
@@ -561,7 +561,7 @@ export function ContentCalendar({
         {[
           { label: "Draft", color: "bg-gray-400" },
           { label: "Scheduled", color: "bg-blue-500" },
-          { label: "Published", color: "bg-green-500" },
+          { label: "Published", color: "bg-emerald-500" },
           { label: "Failed", color: "bg-red-500" },
         ].map(({ label, color }) => (
           <div key={label} className="flex items-center gap-2">

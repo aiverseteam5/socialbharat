@@ -37,7 +37,7 @@ const platformIcon: Record<InboxPlatform, typeof Facebook> = {
 };
 
 const statusConfig: Record<RealtimeStatus, { dot: string; label: string }> = {
-  connected: { dot: "bg-green-500", label: "Live" },
+  connected: { dot: "bg-emerald-500", label: "Live" },
   connecting: { dot: "bg-yellow-400 animate-pulse", label: "Connecting" },
   disconnected: { dot: "bg-slate-400", label: "Offline" },
   error: { dot: "bg-red-500", label: "Error" },

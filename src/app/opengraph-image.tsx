@@ -16,7 +16,7 @@ export default function OpengraphImage() {
         justifyContent: "center",
         alignItems: "flex-start",
         padding: "80px",
-        background: "linear-gradient(135deg, #1A1A2E 0%, #16213E 100%)",
+        background: "linear-gradient(135deg, #2563EB 0%, #7C3AED 100%)",
         color: "#FFFFFF",
       }}
     >
@@ -25,14 +25,12 @@ export default function OpengraphImage() {
           display: "flex",
           alignItems: "center",
           fontSize: 88,
-          fontWeight: 800,
           letterSpacing: "-0.03em",
           marginBottom: 24,
         }}
       >
-        <span>Social</span>
-        <span style={{ color: "#FF6B35" }}>Bharat</span>
-        <span style={{ marginLeft: 16 }}>🇮🇳</span>
+        <span style={{ fontWeight: 300 }}>Social</span>
+        <span style={{ fontWeight: 700 }}>Bharat</span>
       </div>
       <div
         style={{
@@ -52,8 +50,9 @@ export default function OpengraphImage() {
           bottom: 60,
           left: 80,
           fontSize: 24,
-          color: "#FF6B35",
+          color: "#FFFFFF",
           fontWeight: 600,
+          opacity: 0.85,
         }}
       >
         socialbharat.tynkai.com

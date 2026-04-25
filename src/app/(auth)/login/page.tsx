@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Logo } from "@/components/ui/logo";
 
 const UPCOMING_FESTIVALS = [
   {
@@ -43,35 +44,38 @@ const UPCOMING_FESTIVALS = [
 
 function FestivalPanel() {
   return (
-    <div className="hidden lg:flex flex-col justify-between h-full bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-8 text-white">
+    <div className="hidden lg:flex flex-col justify-between h-full bg-[#0F172A] rounded-2xl p-8 text-white">
       <div>
-        <h1 className="text-3xl font-bold mb-1">
-          Social<span className="text-orange-100">Bharat</span> 🇮🇳
-        </h1>
-        <p className="text-orange-100 text-sm">
+        <Logo variant="white" size="lg" />
+        <p className="mt-3 text-sm text-slate-400">
           India&apos;s AI-powered social media platform
         </p>
       </div>
 
       <div className="space-y-4">
-        <h2 className="font-semibold text-lg">Upcoming Festivals</h2>
+        <h2 className="font-semibold text-lg text-white">Upcoming Festivals</h2>
         {UPCOMING_FESTIVALS.map((f) => (
-          <div key={f.name} className="bg-white/15 rounded-xl p-4 space-y-1">
+          <div
+            key={f.name}
+            className="bg-white/5 ring-1 ring-white/10 rounded-xl p-4 space-y-1"
+          >
             <div className="flex items-center gap-2">
               <span className="text-2xl">{f.emoji}</span>
               <div>
-                <p className="font-semibold text-sm">{f.name}</p>
-                <p className="text-xs text-orange-100">{f.date}</p>
+                <p className="font-semibold text-sm text-white">{f.name}</p>
+                <p className="text-xs text-slate-400">{f.date}</p>
               </div>
             </div>
-            <p className="text-xs text-orange-50 leading-relaxed">{f.tip}</p>
+            <p className="text-xs text-slate-300 leading-relaxed">{f.tip}</p>
           </div>
         ))}
       </div>
 
-      <div className="bg-white/10 rounded-xl p-4">
-        <p className="text-sm font-medium">🚀 Join 10,000+ Indian brands</p>
-        <p className="text-xs text-orange-100 mt-1">
+      <div className="bg-white/5 ring-1 ring-white/10 rounded-xl p-4">
+        <p className="text-sm font-medium text-white">
+          🚀 Join 10,000+ Indian brands
+        </p>
+        <p className="text-xs text-slate-400 mt-1">
           scheduling smarter with SocialBharat
         </p>
       </div>
@@ -199,15 +203,9 @@ export default function LoginPage() {
       <FestivalPanel />
 
       <div className="flex flex-col justify-center">
-        <div className="mb-6 text-center lg:text-left">
-          <h1 className="text-2xl font-bold lg:hidden">
-            <span className="text-slate-800">Social</span>
-            <span style={{ color: "#FF6B35" }}>Bharat</span>
-            <span aria-hidden className="ml-1">
-              🇮🇳
-            </span>
-          </h1>
-          <p className="text-sm text-slate-500 lg:hidden mt-1">
+        <div className="mb-6 text-center lg:text-left lg:hidden">
+          <Logo variant="default" size="sm" />
+          <p className="text-sm text-slate-500 mt-2">
             India&apos;s Social Media Platform
           </p>
         </div>
@@ -239,7 +237,7 @@ export default function LoginPage() {
                     <Button
                       onClick={handleSendOtp}
                       disabled={loading}
-                      className="w-full"
+                      className="w-full bg-brand-gradient-animated text-white font-semibold hover:opacity-95"
                     >
                       {loading ? "Sending..." : "Send OTP"}
                     </Button>
@@ -270,14 +268,14 @@ export default function LoginPage() {
                     <Button
                       onClick={handleVerifyOtp}
                       disabled={loading}
-                      className="w-full"
+                      className="w-full bg-brand-gradient-animated text-white font-semibold hover:opacity-95"
                     >
                       {loading ? "Verifying..." : "Verify OTP"}
                     </Button>
                     <Button
                       variant="link"
                       onClick={() => setOtpSent(false)}
-                      className="w-full"
+                      className="w-full text-blue-600 hover:text-blue-700"
                     >
                       Change phone number
                     </Button>
@@ -308,7 +306,7 @@ export default function LoginPage() {
                   <Button
                     onClick={handleEmailLogin}
                     disabled={loading}
-                    className="w-full"
+                    className="w-full bg-brand-gradient-animated text-white font-semibold hover:opacity-95"
                   >
                     {loading ? "Signing in..." : "Sign In"}
                   </Button>
@@ -320,12 +318,15 @@ export default function LoginPage() {
                 variant="outline"
                 onClick={handleGoogleLogin}
                 disabled={loading}
-                className="w-full"
+                className="w-full bg-white border-slate-300 text-slate-700 hover:bg-slate-50"
               >
                 Continue with Google
               </Button>
               <div className="text-center text-sm">
-                <a href="/register" className="text-primary hover:underline">
+                <a
+                  href="/register"
+                  className="text-blue-600 hover:text-blue-700"
+                >
                   Don&apos;t have an account? Register
                 </a>
               </div>

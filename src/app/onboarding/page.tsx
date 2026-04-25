@@ -14,8 +14,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const ORANGE = "#FF6B35";
-
 export default function OnboardingPage() {
   const router = useRouter();
   const [accountType, setAccountType] = useState<"individual" | "team" | null>(
@@ -65,10 +63,7 @@ export default function OnboardingPage() {
         <div className="text-center space-y-4">
           {autoCreating ? (
             <>
-              <Loader2
-                className="mx-auto h-10 w-10 animate-spin"
-                style={{ color: ORANGE }}
-              />
+              <Loader2 className="mx-auto h-10 w-10 animate-spin text-blue-600" />
               <p className="text-slate-600">Setting up your workspace…</p>
             </>
           ) : (
@@ -203,8 +198,7 @@ function TeamWorkspaceForm({
           {error && <p className="text-sm text-destructive">{error}</p>}
 
           <Button
-            className="w-full gap-2 font-semibold text-white"
-            style={{ backgroundColor: ORANGE }}
+            className="w-full gap-2 font-semibold text-white bg-brand-gradient-animated hover:opacity-95"
             disabled={loading || !orgName.trim()}
             onClick={handleCreate}
           >

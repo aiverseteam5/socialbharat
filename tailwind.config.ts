@@ -44,28 +44,41 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        /* Saffron brand palette — #FF6B00 as 600 */
+        /* SocialBharat brand palette — electric blue, #3B82F6 as 500 */
         brand: {
-          "50": "#fff4e8",
-          "100": "#ffe4c3",
-          "200": "#ffca8a",
-          "300": "#ffaa4d",
-          "400": "#ff8c1a",
-          "500": "#ff7200",
-          "600": "#FF6B00",
-          "700": "#d95a00",
-          "800": "#b34900",
-          "900": "#8a3800",
-          "950": "#5c2500",
+          "50": "#EFF6FF",
+          "100": "#DBEAFE",
+          "200": "#BFDBFE",
+          "300": "#93C5FD",
+          "400": "#60A5FA",
+          "500": "#3B82F6",
+          "600": "#2563EB",
+          "700": "#1D4ED8",
+          "800": "#1E40AF",
+          "900": "#1E3A8A",
+          "950": "#172554",
+        },
+        /* Accent purple — for gradient pair-stops with brand */
+        accent2: {
+          "50": "#F5F3FF",
+          "100": "#EDE9FE",
+          "200": "#DDD6FE",
+          "300": "#C4B5FD",
+          "400": "#A78BFA",
+          "500": "#8B5CF6",
+          "600": "#7C3AED",
+          "700": "#6D28D9",
+          "800": "#5B21B6",
+          "900": "#4C1D95",
         },
         /* Sidebar specific tokens */
         sidebar: {
-          DEFAULT: "#0f172a" /* slate-900 */,
-          hover: "#1e293b" /* slate-800 */,
-          active: "#1e293b" /* slate-800 */,
-          border: "#1e293b",
-          text: "#cbd5e1" /* slate-300 */,
-          "text-active": "#f1f5f9" /* slate-100 */,
+          DEFAULT: "#0B1220" /* deep navy */,
+          hover: "#111A2E",
+          active: "#172238",
+          border: "#172238",
+          text: "#94A3B8" /* slate-400 */,
+          "text-active": "#F8FAFC" /* slate-50 */,
         },
       },
       borderRadius: {
@@ -77,15 +90,45 @@ const config: Config = {
         card: "0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.04)",
         "card-hover":
           "0 4px 12px 0 rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.06)",
+        glow: "0 10px 40px -10px rgb(59 130 246 / 0.45)",
+        "glow-purple": "0 10px 40px -10px rgb(139 92 246 / 0.45)",
+        "glow-lg": "0 20px 60px -12px rgb(59 130 246 / 0.35)",
+      },
+      backgroundImage: {
+        "brand-gradient":
+          "linear-gradient(135deg, #3B82F6 0%, #6366F1 50%, #8B5CF6 100%)",
+        "brand-gradient-soft":
+          "linear-gradient(135deg, #EFF6FF 0%, #F5F3FF 100%)",
+        "brand-radial":
+          "radial-gradient(circle at 30% 20%, rgba(59,130,246,0.18), transparent 55%), radial-gradient(circle at 80% 70%, rgba(139,92,246,0.18), transparent 55%)",
       },
       keyframes: {
         "slide-up-fade": {
           "0%": { opacity: "0", transform: "translateY(4px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
+        "gradient-shift": {
+          "0%, 100%": { backgroundPosition: "0% 50%" },
+          "50%": { backgroundPosition: "100% 50%" },
+        },
+        float: {
+          "0%, 100%": { transform: "translateY(0px)" },
+          "50%": { transform: "translateY(-8px)" },
+        },
+        shimmer: {
+          "0%": { backgroundPosition: "-200% 0" },
+          "100%": { backgroundPosition: "200% 0" },
+        },
       },
       animation: {
         "slide-up-fade": "slide-up-fade 0.18s ease-out",
+        "gradient-shift": "gradient-shift 8s ease infinite",
+        float: "float 4s ease-in-out infinite",
+        shimmer: "shimmer 2.4s linear infinite",
+      },
+      fontFamily: {
+        sans: ["var(--font-inter)", "system-ui", "sans-serif"],
+        display: ["var(--font-inter)", "system-ui", "sans-serif"],
       },
     },
   },

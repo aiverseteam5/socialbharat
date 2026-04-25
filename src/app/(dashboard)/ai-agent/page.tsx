@@ -46,7 +46,10 @@ const STATUS_BADGE: Record<PlanStatus, { label: string; className: string }> = {
     className: "bg-amber-100 text-amber-800",
   },
   approved: { label: "Approved", className: "bg-blue-100 text-blue-800" },
-  published: { label: "Published", className: "bg-green-100 text-green-800" },
+  published: {
+    label: "Published",
+    className: "bg-emerald-100 text-emerald-800",
+  },
   discarded: { label: "Discarded", className: "bg-red-50 text-red-700" },
 };
 

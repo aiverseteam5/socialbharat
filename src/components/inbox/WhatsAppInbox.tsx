@@ -62,7 +62,7 @@ export function WhatsAppInbox({ conversations, onSendTemplate }: Props) {
     <div className="space-y-3">
       {whatsappConvos.map((c) => (
         <Card key={c.id} className="flex items-center gap-3 p-3">
-          <MessageSquare className="h-5 w-5 text-green-600" />
+          <MessageSquare className="h-5 w-5 text-emerald-600" />
           <div className="min-w-0 flex-1">
             <p className="truncate font-medium">
               {c.contact?.display_name ?? c.contact?.platform_user_id}

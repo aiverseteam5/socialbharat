@@ -1,15 +1,22 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PricingCards } from "@/components/marketing/PricingCards";
+import { LogoGlyph } from "@/components/ui/logo";
 import {
   ArrowRight,
+  BarChart3,
+  CalendarDays,
   Check,
-  Play,
-  Star,
-  X,
+  IndianRupee,
+  Languages,
   Link2,
   PenLine,
+  Play,
   Rocket,
+  Sparkles,
+  Star,
+  Users,
+  X,
 } from "lucide-react";
 import {
   FaWhatsapp,
@@ -19,6 +26,12 @@ import {
   FaYoutube,
 } from "react-icons/fa6";
 import { FaXTwitter } from "react-icons/fa6";
+
+type IconType = React.ComponentType<{
+  className?: string;
+  strokeWidth?: number | string;
+  size?: number | string;
+}>;
 
 export const metadata: Metadata = {
   title: "SocialBharat — India's AI Social Media Management Platform",
@@ -32,8 +45,8 @@ export const metadata: Metadata = {
   },
 };
 
-const BRAND = "#FF6B35";
-const BRAND_DARK = "#1A1A2E";
+const BRAND = "#3B82F6";
+const BRAND_DARK = "#0B1220";
 
 export default function LandingPage() {
   return (
@@ -54,54 +67,64 @@ export default function LandingPage() {
 
 function Hero() {
   return (
-    <section
-      className="relative overflow-hidden"
-      style={{
-        minHeight: "90vh",
-        background:
-          "radial-gradient(ellipse at top, #E8F4FD 0%, #FFFFFF 60%, #FFFFFF 100%)",
-      }}
-    >
-      <div className="bg-grid-pattern absolute inset-0 opacity-60" />
-      <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-4 pb-20 pt-16 sm:px-6 md:grid-cols-5 lg:px-8 lg:pb-28 lg:pt-24">
+    <section className="bg-mesh-brand relative overflow-hidden">
+      {/* Decorative grid */}
+      <div className="bg-grid-pattern absolute inset-0" />
+
+      {/* Floating glow orbs */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -left-24 top-24 h-72 w-72 rounded-full bg-brand-400/30 blur-3xl"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute right-0 top-1/3 h-96 w-96 rounded-full bg-accent2-400/30 blur-3xl"
+      />
+
+      <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-4 pb-24 pt-20 sm:px-6 md:grid-cols-5 lg:px-8 lg:pb-32 lg:pt-28">
         <div className="md:col-span-3">
           <span
-            className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold"
+            className="inline-flex items-center gap-2 rounded-full border border-brand-200 px-3 py-1.5 text-xs font-semibold shadow-sm"
             style={{
-              color: BRAND,
-              backgroundColor: "#FFF4EC",
-              borderColor: "#FFD4B8",
+              background:
+                "linear-gradient(135deg, rgba(59,130,246,0.10) 0%, rgba(139,92,246,0.10) 100%)",
+              color: "#1D4ED8",
             }}
           >
-            🤖 AI-Powered · India&apos;s #1 Social Media Tool
+            <Sparkles className="h-3.5 w-3.5" style={{ color: "#2563EB" }} />
+            AI-Powered · India&apos;s #1 Social Media Platform
           </span>
 
-          <h1 className="mt-6 text-5xl font-bold tracking-tight text-slate-900 md:text-6xl">
-            Manage All Your Social Media
+          <h1 className="mt-6 text-5xl font-bold tracking-tight text-slate-900 md:text-6xl lg:text-7xl">
+            One Vision.
             <br />
-            <span style={{ color: BRAND }}>In Every Indian Language</span>
+            <span className="text-gradient-brand">Many Solutions.</span>
+            <br />
+            Built for Bharat.
           </h1>
 
-          <p className="mt-5 max-w-xl text-xl text-slate-600">
+          <p className="mt-6 max-w-xl text-xl leading-relaxed text-slate-600">
             WhatsApp Business inbox, AI content in Hindi &amp; Hinglish, 50+
-            festival templates, and analytics — all for ₹499/month. Built for
-            Indian brands.
+            festival templates, and analytics — all for ₹499/month. Made for
+            Indian brands, powered by{" "}
+            <span className="font-semibold text-slate-800">TynkAI</span>.
           </p>
 
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:gap-4">
+          <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:gap-4">
             <Link
               href="/register"
-              className="group inline-flex items-center justify-center gap-2 rounded-lg px-6 py-3.5 text-base font-semibold text-white shadow-lg transition-all hover:shadow-xl active:scale-[0.98]"
-              style={{ backgroundColor: BRAND }}
+              className="bg-brand-gradient-animated shadow-brand-glow group inline-flex items-center justify-center gap-2 rounded-xl px-7 py-4 text-base font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
               Start Free Trial
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
             <Link
               href="#demo"
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-6 py-3.5 text-base font-semibold text-slate-900 transition-all hover:bg-slate-50"
+              className="group inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-7 py-4 text-base font-semibold text-slate-900 shadow-sm transition-all hover:border-brand-300 hover:shadow-md"
             >
-              <Play className="h-4 w-4" style={{ color: BRAND }} />
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-50 transition-colors group-hover:bg-brand-100">
+                <Play className="h-3 w-3 fill-brand-600 text-brand-600" />
+              </span>
               See How It Works
             </Link>
           </div>
@@ -162,10 +185,68 @@ function Hero() {
         </div>
 
         <div className="md:col-span-2">
-          <HeroMockup />
+          <HeroLogoShowcase />
         </div>
       </div>
     </section>
+  );
+}
+
+function HeroLogoShowcase() {
+  return (
+    <div className="relative">
+      {/* Glow ring behind the tile */}
+      <div
+        aria-hidden
+        className="absolute inset-0 -m-6 rounded-[40px] bg-brand-gradient opacity-30 blur-3xl"
+      />
+
+      <div className="glass-panel relative rounded-3xl p-8 shadow-glow-lg">
+        <div className="flex flex-col items-center text-center">
+          <LogoGlyph size={168} className="animate-float drop-shadow-2xl" />
+
+          <h2 className="mt-7 text-3xl tracking-tight">
+            <span className="font-light text-[#1E293B]">Social</span>
+            <span className="font-bold text-[#2563EB]">Bharat</span>
+          </h2>
+
+          <p className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+            Powered by TynkAI
+          </p>
+
+          <div className="mt-6 grid w-full grid-cols-3 gap-2 text-center">
+            <ShowcaseStat value="500M+" label="WhatsApp users" />
+            <ShowcaseStat value="6" label="Indian languages" />
+            <ShowcaseStat value="50+" label="Festivals" />
+          </div>
+        </div>
+      </div>
+
+      <div className="glass-panel animate-toast absolute -bottom-5 -left-4 z-10 flex max-w-[260px] items-start gap-2.5 rounded-xl p-3 shadow-card-hover">
+        <span className="bg-brand-gradient flex h-8 w-8 items-center justify-center rounded-full text-white">
+          <Sparkles className="h-4 w-4" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-xs font-semibold text-slate-900">
+            New WhatsApp message
+          </p>
+          <p className="truncate text-xs text-slate-500">
+            Priya S. — &ldquo;Hi, is this item available?&rdquo;
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ShowcaseStat({ value, label }: { value: string; label: string }) {
+  return (
+    <div className="rounded-xl bg-white/60 p-3 ring-1 ring-slate-200/70">
+      <p className="text-gradient-brand text-xl font-bold">{value}</p>
+      <p className="mt-0.5 text-[11px] font-medium uppercase tracking-wider text-slate-500">
+        {label}
+      </p>
+    </div>
   );
 }
 
@@ -191,143 +272,6 @@ function PlatformIcon({
     >
       <Icon size={32} color={color} aria-label={label} />
     </span>
-  );
-}
-
-function HeroMockup() {
-  return (
-    <div className="relative">
-      <div className="absolute -right-2 -top-2 z-10 inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-red-600 shadow">
-        <span
-          className="animate-live-pulse inline-block h-2 w-2 rounded-full"
-          style={{ backgroundColor: "#EF4444" }}
-        />
-        Live
-      </div>
-
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-4 py-2.5">
-          <div className="flex gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-red-400" />
-            <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
-            <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
-          </div>
-          <span className="text-xs text-slate-400">SocialBharat Dashboard</span>
-          <span className="w-8" />
-        </div>
-
-        <div className="space-y-3 p-4">
-          <div className="grid grid-cols-3 gap-2">
-            <StatCard emoji="📊" value="12.4K" label="Reach" />
-            <StatCard emoji="❤️" value="847" label="Likes" />
-            <StatCard emoji="💬" value="234" label="Replies" />
-          </div>
-
-          <div className="rounded-lg border border-slate-100 bg-white p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Upcoming Posts
-            </p>
-            <div className="mt-2 space-y-2">
-              <SchedulePreviewRow
-                color="#E4405F"
-                text="Diwali sale — 30% off everything"
-                time="Today 6PM"
-              />
-              <SchedulePreviewRow
-                color="#1DA1F2"
-                text="Thread: 5 hacks for Indian founders 🇮🇳"
-                time="Tomorrow 9AM"
-              />
-              <SchedulePreviewRow
-                color="#25D366"
-                text="Broadcast: weekly offer to 2.4K customers"
-                time="Fri 11AM"
-              />
-            </div>
-          </div>
-
-          <div
-            className="flex items-center justify-between rounded-lg p-3 text-white"
-            style={{
-              background: "linear-gradient(135deg, #FF6B35 0%, #FF9466 100%)",
-            }}
-          >
-            <div className="flex items-center gap-2 text-xs font-medium">
-              <span>✨</span>
-              <span>Diwali is in 12 days — Create campaign in Hindi?</span>
-            </div>
-            <button className="rounded-md bg-white/95 px-2.5 py-1 text-xs font-semibold text-orange-600 shadow">
-              Generate
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div
-        className="animate-toast absolute -bottom-5 -left-4 z-10 flex max-w-[260px] items-start gap-2.5 rounded-xl bg-white p-3 shadow-xl"
-        style={{ border: "1px solid #E2E8F0" }}
-      >
-        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-base">
-          💬
-        </span>
-        <div className="min-w-0">
-          <p className="text-xs font-semibold text-slate-900">
-            New WhatsApp message
-          </p>
-          <p className="truncate text-xs text-slate-500">
-            Priya S. — &ldquo;Hi, is this item available?&rdquo;
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function StatCard({
-  emoji,
-  value,
-  label,
-}: {
-  emoji: string;
-  value: string;
-  label: string;
-}) {
-  return (
-    <div className="rounded-lg bg-white p-2 shadow-sm ring-1 ring-slate-100">
-      <div className="text-xs text-slate-500">
-        <span className="mr-1" aria-hidden>
-          {emoji}
-        </span>
-        {label}
-      </div>
-      <div className="mt-0.5 text-sm font-bold text-slate-900">{value}</div>
-    </div>
-  );
-}
-
-function SchedulePreviewRow({
-  color,
-  text,
-  time,
-}: {
-  color: string;
-  text: string;
-  time: string;
-}) {
-  return (
-    <div className="flex items-center gap-2">
-      <span
-        className="h-2 w-2 flex-shrink-0 rounded-full"
-        style={{ backgroundColor: color }}
-      />
-      <span className="flex-1 truncate text-xs text-slate-700">{text}</span>
-      <span
-        className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
-        style={{ backgroundColor: "#FFF4EC", color: BRAND }}
-      >
-        {time}
-      </span>
-    </div>
   );
 }
 
@@ -368,40 +312,55 @@ function SocialProofBar() {
 
 // ---------- Section 4: Features grid ----------
 
-const FEATURES = [
+interface Feature {
+  Icon: IconType;
+  iconGradient: string;
+  title: string;
+  desc: string;
+  badge?: string;
+  badgeClass?: string;
+}
+
+const FEATURES: Feature[] = [
   {
-    icon: "💬",
+    Icon: FaWhatsapp,
+    iconGradient: "linear-gradient(135deg, #25D366 0%, #128C7E 100%)",
     title: "WhatsApp Business Inbox",
     desc: "Reply to customer WhatsApp messages from your dashboard. India's #1 messaging channel, finally in your social media tool.",
-    badge: "India-Only Feature 🇮🇳",
-    badgeClass: "bg-green-100 text-green-700",
+    badge: "India-First Feature",
+    badgeClass: "bg-emerald-100 text-emerald-700",
   },
   {
-    icon: "🤖",
+    Icon: Languages,
+    iconGradient: "linear-gradient(135deg, #8B5CF6 0%, #6366F1 100%)",
     title: "AI Content in Hindi & Hinglish",
     desc: "Generate captions, hashtags, and replies in Hindi, Hinglish, Tamil, Telugu. Not Google Translate — real AI trained for Indian content.",
     badge: "22 Languages",
-    badgeClass: "bg-orange-100 text-orange-700",
+    badgeClass: "bg-purple-100 text-purple-700",
   },
   {
-    icon: "🎉",
+    Icon: CalendarDays,
+    iconGradient: "linear-gradient(135deg, #F59E0B 0%, #EA580C 100%)",
     title: "Festival Calendar Intelligence",
     desc: "50+ Indian festivals with pre-built content ideas, hashtags, and best posting times. Never miss a Diwali campaign again.",
     badge: "50+ Festivals",
     badgeClass: "bg-amber-100 text-amber-700",
   },
   {
-    icon: "📊",
+    Icon: BarChart3,
+    iconGradient: "linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)",
     title: "Analytics That Make Sense",
     desc: "Track performance across Instagram, Facebook, WhatsApp, and YouTube. India industry benchmarks so you know how you compare.",
   },
   {
-    icon: "👥",
+    Icon: Users,
+    iconGradient: "linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)",
     title: "Team Collaboration",
     desc: "Invite your team, set roles, create approval workflows. Your social media manager approves before anything goes live.",
   },
   {
-    icon: "💳",
+    Icon: IndianRupee,
+    iconGradient: "linear-gradient(135deg, #10B981 0%, #059669 100%)",
     title: "Pay in INR via UPI",
     desc: "Plans starting ₹499/month. Pay via UPI, cards, or net banking. GST-compliant invoices for your business.",
     badge: "Razorpay Powered",
@@ -427,13 +386,13 @@ function FeaturesGrid() {
           {FEATURES.map((f) => (
             <div
               key={f.title}
-              className="group rounded-2xl border border-slate-100 bg-white p-6 shadow-sm transition-all duration-200 hover:border-orange-200 hover:shadow-md"
+              className="group rounded-2xl border border-slate-100 bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-brand-200 hover:shadow-md"
             >
               <div
-                className="flex h-12 w-12 items-center justify-center rounded-full text-2xl"
-                style={{ backgroundColor: "#FFF4EC" }}
+                className="flex h-12 w-12 items-center justify-center rounded-xl text-white shadow-md transition-transform duration-200 group-hover:scale-105"
+                style={{ background: f.iconGradient }}
               >
-                {f.icon}
+                <f.Icon className="h-6 w-6" />
               </div>
               <h3 className="mt-4 text-lg font-semibold text-slate-900">
                 {f.title}
@@ -458,25 +417,33 @@ function FeaturesGrid() {
 
 // ---------- Section 5: How it works ----------
 
-const STEPS = [
+interface Step {
+  n: number;
+  Icon: IconType;
+  gradient: string;
+  title: string;
+  desc: string;
+}
+
+const STEPS: Step[] = [
   {
     n: 1,
-    icon: Link2,
-    emoji: "🔗",
+    Icon: Link2,
+    gradient: "linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)",
     title: "Connect Your Accounts",
     desc: "Link Instagram, Facebook, WhatsApp Business, Twitter, LinkedIn with one click via secure OAuth.",
   },
   {
     n: 2,
-    icon: PenLine,
-    emoji: "✏️",
+    Icon: PenLine,
+    gradient: "linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)",
     title: "Create or Generate Content",
     desc: "Write posts yourself or let AI generate captions in Hindi, Hinglish, or English. Add media, hashtags, schedule.",
   },
   {
     n: 3,
-    icon: Rocket,
-    emoji: "🚀",
+    Icon: Rocket,
+    gradient: "linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)",
     title: "Publish & Monitor",
     desc: "Posts go out automatically. Monitor replies in your unified inbox. Track analytics in one dashboard.",
   },
@@ -509,16 +476,21 @@ function HowItWorks() {
           <div className="relative grid gap-10 md:grid-cols-3">
             {STEPS.map((s) => (
               <div key={s.n} className="flex flex-col items-center text-center">
-                <div
-                  className="flex h-16 w-16 items-center justify-center rounded-full text-2xl font-bold text-white shadow-md ring-8 ring-slate-50"
-                  style={{ backgroundColor: BRAND }}
-                >
-                  {s.n}
+                <div className="relative">
+                  <div
+                    className="flex h-20 w-20 items-center justify-center rounded-2xl text-white shadow-lg ring-8 ring-slate-50"
+                    style={{ background: s.gradient }}
+                  >
+                    <s.Icon className="h-9 w-9" strokeWidth={1.75} />
+                  </div>
+                  <span
+                    className="absolute -right-2 -top-2 flex h-7 w-7 items-center justify-center rounded-full border-2 border-slate-50 bg-white text-xs font-bold shadow-sm"
+                    style={{ color: "#2563EB" }}
+                  >
+                    {s.n}
+                  </span>
                 </div>
-                <div className="mt-4 text-3xl" aria-hidden>
-                  {s.emoji}
-                </div>
-                <h3 className="mt-3 text-lg font-semibold text-slate-900">
+                <h3 className="mt-5 text-lg font-semibold text-slate-900">
                   {s.title}
                 </h3>
                 <p className="mt-2 max-w-xs text-sm leading-relaxed text-slate-600">
@@ -589,7 +561,7 @@ function Comparison() {
                 </th>
                 <th
                   className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider sm:px-6"
-                  style={{ color: BRAND, backgroundColor: "#FFF4EC" }}
+                  style={{ color: "#1D4ED8", backgroundColor: "#EFF6FF" }}
                 >
                   SocialBharat
                 </th>
@@ -606,7 +578,7 @@ function Comparison() {
                   </td>
                   <td
                     className="px-4 py-4 sm:px-6"
-                    style={{ backgroundColor: "#FFF9F4" }}
+                    style={{ backgroundColor: "#F8FAFF" }}
                   >
                     <span className="inline-flex items-center gap-2 text-slate-900">
                       <Check

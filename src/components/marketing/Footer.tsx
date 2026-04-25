@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Twitter, Instagram, Linkedin, Youtube } from "lucide-react";
+import { Logo } from "@/components/ui/logo";
 
 const PRODUCT = [
   { label: "Dashboard", href: "/dashboard" },
@@ -16,42 +17,37 @@ const COMPANY = [
   { label: "Contact", href: "mailto:contact@tynkai.com" },
 ];
 const LEGAL = [
-  { label: "Privacy Policy", href: "/privacy" },
-  { label: "Terms of Service", href: "/terms" },
+  { label: "Privacy", href: "/privacy" },
+  { label: "Terms", href: "/terms" },
   { label: "Data Deletion", href: "/data-deletion" },
 ];
 
 export function MarketingFooter() {
   return (
-    <footer className="border-t border-slate-200 bg-white">
+    <footer className="bg-[#0F172A] text-slate-400">
       <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
         <div className="grid gap-10 md:grid-cols-4">
           <div>
-            <div className="flex items-center gap-1 text-xl font-bold tracking-tight">
-              <span className="text-slate-800">Social</span>
-              <span style={{ color: "#FF6B35" }}>Bharat</span>
-              <span aria-hidden>🇮🇳</span>
-            </div>
-            <p className="mt-3 text-sm text-slate-600">
-              India&apos;s AI Social Media OS
+            <Logo variant="white" size="sm" />
+            <p className="mt-4 text-sm text-slate-400">
+              India&apos;s AI Social Media Platform
             </p>
+            <span className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-400 ring-1 ring-emerald-500/20">
+              Powered by TynkAI
+            </span>
             <p className="mt-6 text-xs text-slate-500">
               © 2026 SocialBharat. All rights reserved.
-            </p>
-            <p className="mt-1 text-xs text-slate-500">
-              Made with <span style={{ color: "#FF6B35" }}>❤</span> in Bengaluru
-              🇮🇳
             </p>
           </div>
 
           <div>
-            <h3 className="text-sm font-semibold text-slate-900">Product</h3>
+            <h3 className="text-sm font-semibold text-white">Product</h3>
             <ul className="mt-4 space-y-2">
               {PRODUCT.map((l) => (
                 <li key={l.label}>
                   <Link
                     href={l.href}
-                    className="text-sm text-slate-600 transition-colors hover:text-slate-900"
+                    className="text-sm text-slate-400 transition-colors hover:text-white"
                   >
                     {l.label}
                   </Link>
@@ -61,13 +57,13 @@ export function MarketingFooter() {
           </div>
 
           <div>
-            <h3 className="text-sm font-semibold text-slate-900">Company</h3>
+            <h3 className="text-sm font-semibold text-white">Company</h3>
             <ul className="mt-4 space-y-2">
               {COMPANY.map((l) => (
                 <li key={l.label}>
                   <Link
                     href={l.href}
-                    className="text-sm text-slate-600 transition-colors hover:text-slate-900"
+                    className="text-sm text-slate-400 transition-colors hover:text-white"
                   >
                     {l.label}
                   </Link>
@@ -77,13 +73,13 @@ export function MarketingFooter() {
           </div>
 
           <div>
-            <h3 className="text-sm font-semibold text-slate-900">Legal</h3>
+            <h3 className="text-sm font-semibold text-white">Legal</h3>
             <ul className="mt-4 space-y-2">
               {LEGAL.map((l) => (
                 <li key={l.label}>
                   <Link
                     href={l.href}
-                    className="text-sm text-slate-600 transition-colors hover:text-slate-900"
+                    className="text-sm text-slate-400 transition-colors hover:text-white"
                   >
                     {l.label}
                   </Link>
@@ -96,7 +92,7 @@ export function MarketingFooter() {
           </div>
         </div>
 
-        <div className="mt-10 flex flex-col items-start justify-between gap-4 border-t border-slate-100 pt-6 md:flex-row md:items-center">
+        <div className="mt-10 flex flex-col items-start justify-between gap-4 border-t border-white/10 pt-6 md:flex-row md:items-center">
           <p className="text-xs text-slate-500">
             SocialBharat is an AI-powered social media management platform for
             Indian brands.
@@ -105,28 +101,28 @@ export function MarketingFooter() {
             <Link
               href="#"
               aria-label="Twitter"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-white/5 hover:text-white"
             >
               <Twitter className="h-4 w-4" />
             </Link>
             <Link
               href="#"
               aria-label="Instagram"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-white/5 hover:text-white"
             >
               <Instagram className="h-4 w-4" />
             </Link>
             <Link
               href="#"
               aria-label="LinkedIn"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-white/5 hover:text-white"
             >
               <Linkedin className="h-4 w-4" />
             </Link>
             <Link
               href="#"
               aria-label="YouTube"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-white/5 hover:text-white"
             >
               <Youtube className="h-4 w-4" />
             </Link>
