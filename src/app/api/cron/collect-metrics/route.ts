@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { collectMetricsForAllOrgs } from "@/lib/metrics-collector";
+import { metricsQueue } from "@/lib/queue/queues";
 import { logger } from "@/lib/logger";
 
 /**
- * GET /api/cron/collect-metrics
- * Vercel Cron handler — collects yesterday's metrics for every active
- * social profile across all orgs. Protected by CRON_SECRET.
+ * POST /api/cron/collect-metrics
+ *
+ * V3 Phase 3B — enqueues a `collect-all` job on metricsQueue.
+ * The metrics worker runs the daily sweep via collectMetricsForAllOrgs().
  */
-export async function GET(request: NextRequest) {
+async function run(request: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
   const authHeader = request.headers.get("authorization");
 
@@ -17,23 +18,27 @@ export async function GET(request: NextRequest) {
       { status: 500 },
     );
   }
-
   if (authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
-    const now = new Date();
-    const result = await collectMetricsForAllOrgs(now);
-
-    return NextResponse.json({ success: true, ...result });
-  } catch (error) {
-    logger.error("collect-metrics cron failed", error);
-    return NextResponse.json(
+    const job = await metricsQueue().add(
+      "collect-all",
+      { kind: "collect-all" },
       {
-        error: error instanceof Error ? error.message : "Cron job failed",
+        jobId: `cron-metrics-${Math.floor(Date.now() / 3_600_000)}`,
       },
+    );
+    return NextResponse.json({ success: true, jobId: job.id });
+  } catch (error) {
+    logger.error("Cron collect-metrics enqueue failed", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Cron job failed" },
       { status: 500 },
     );
   }
 }
+
+export const POST = run;
+export const GET = run;

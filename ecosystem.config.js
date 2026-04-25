@@ -1,6 +1,7 @@
 // PM2 process manifest for Hostinger VPS deployment.
-// `socialbharat-workers` is intentionally commented out — it will be
-// enabled in V3 Phase 3B when src/workers/index.ts (BullMQ entry) lands.
+// V3 Phase 3B — socialbharat-workers is enabled: it runs the BullMQ worker
+// entrypoint at src/workers/index.ts via `tsx` for publish, metrics,
+// token-refresh, and notification queues.
 module.exports = {
   apps: [
     {
@@ -20,17 +21,24 @@ module.exports = {
       merge_logs: true,
       log_date_format: "YYYY-MM-DD HH:mm:ss",
     },
-    // {
-    //   name: "socialbharat-workers",
-    //   script: "src/workers/index.ts",
-    //   interpreter: "tsx",
-    //   cwd: "/var/www/socialbharat",
-    //   env_production: { NODE_ENV: "production" },
-    //   instances: 1,
-    //   exec_mode: "fork",
-    //   max_memory_restart: "512M",
-    //   error_file: "/var/log/pm2/workers-error.log",
-    //   out_file: "/var/log/pm2/workers-out.log",
-    // },
+    {
+      name: "socialbharat-workers",
+      script: "node_modules/.bin/tsx",
+      // --env-file is a Node 20+ flag; loads /var/www/socialbharat/.env into
+      // process.env so src/lib/env.ts validation passes at worker boot.
+      args: "--env-file=.env src/workers/index.ts",
+      cwd: "/var/www/socialbharat",
+      env_production: {
+        NODE_ENV: "production",
+      },
+      instances: 1,
+      exec_mode: "fork",
+      max_memory_restart: "512M",
+      error_file: "/var/log/pm2/workers-error.log",
+      out_file: "/var/log/pm2/workers-out.log",
+      merge_logs: true,
+      log_date_format: "YYYY-MM-DD HH:mm:ss",
+      kill_timeout: 30000,
+    },
   ],
 };

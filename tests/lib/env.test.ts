@@ -27,7 +27,7 @@ describe("env", () => {
       env.META_APP_ID,
       env.TWITTER_API_KEY,
       env.LINKEDIN_CLIENT_ID,
-      env.INNGEST_SIGNING_KEY,
+      env.REDIS_URL,
     ];
     for (const v of optionals) {
       expect(v === undefined || typeof v === "string").toBe(true);

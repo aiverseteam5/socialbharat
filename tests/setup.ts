@@ -22,6 +22,9 @@ process.env.RAZORPAY_WEBHOOK_SECRET = "test-webhook-secret";
 
 // AI
 process.env.OPENAI_API_KEY = "sk-test-openai-key";
+process.env.ANTHROPIC_API_KEY = "sk-ant-test-key";
+// AGENT_HUMAN_APPROVAL/AGENT_MAX_STEPS have defaults — left unset in tests
+// so the default path (approval required, 20-step cap) is exercised.
 
 // Email
 process.env.RESEND_API_KEY = "test-resend-key";
