@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Link2, CreditCard, ShieldCheck } from "lucide-react";
+import { Users, Link2, CreditCard, ShieldCheck, Sparkles } from "lucide-react";
 import { t, getLocale } from "@/lib/i18n";
 
 const sections = [
@@ -15,6 +15,12 @@ const sections = [
     icon: Link2,
     titleKey: "settings.social_accounts_title",
     subtitleKey: "settings.social_accounts_subtitle",
+  },
+  {
+    href: "/settings/brand-voice",
+    icon: Sparkles,
+    titleKey: "settings.brand_voice_title",
+    subtitleKey: "settings.brand_voice_subtitle",
   },
   {
     href: "/settings/billing",
