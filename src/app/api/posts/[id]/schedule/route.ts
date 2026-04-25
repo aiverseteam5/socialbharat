@@ -1,10 +1,20 @@
 import { createClient } from "@/lib/supabase/server";
 import { schedulePostSchema } from "@/types/schemas";
+import {
+  schedulePost,
+  cancelScheduledPost,
+  SchedulerValidationError,
+} from "@/lib/queue/scheduler";
+import { logger } from "@/lib/logger";
 import { NextRequest, NextResponse } from "next/server";
 
 /**
  * POST /api/posts/[id]/schedule
- * Schedule a post for future publishing
+ *
+ * V3 Phase 3B — enqueues the post onto BullMQ with a delay and persists the
+ * returned job id on posts.queue_job_id so it can be cancelled/rescheduled.
+ * If the queue enqueue fails we still persist scheduled_at so the cron sweep
+ * (`/api/cron/publish`) can pick the post up as a safety net.
  */
 export async function POST(
   request: NextRequest,
@@ -25,7 +35,6 @@ export async function POST(
     const body = await request.json();
     const parsed = schedulePostSchema.parse(body);
 
-    // Validate scheduled_at is in the future
     const scheduledAt = new Date(parsed.scheduled_at);
     const now = new Date();
 
@@ -36,7 +45,6 @@ export async function POST(
       );
     }
 
-    // Get user's organization
     const { data: orgMember } = await supabase
       .from("org_members")
       .select("org_id")
@@ -53,10 +61,9 @@ export async function POST(
 
     const orgId = orgMember.org_id;
 
-    // Verify post exists and belongs to org
     const { data: existingPost } = await supabase
       .from("posts")
-      .select("id, status")
+      .select("id, status, queue_job_id")
       .eq("id", postId)
       .eq("org_id", orgId)
       .single();
@@ -65,32 +72,49 @@ export async function POST(
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
 
-    // Only draft or pending_approval posts can be scheduled
     if (
       existingPost.status !== "draft" &&
-      existingPost.status !== "pending_approval"
+      existingPost.status !== "pending_approval" &&
+      existingPost.status !== "scheduled"
     ) {
       return NextResponse.json(
-        { error: "Can only schedule draft or pending_approval posts" },
+        {
+          error: "Can only schedule draft, pending_approval or scheduled posts",
+        },
         { status: 400 },
       );
     }
 
-    // Update post with scheduled time
+    // Rescheduling — drop previous delayed job first.
+    if (existingPost.queue_job_id) {
+      await cancelScheduledPost(existingPost.queue_job_id);
+    }
+
+    let queueJobId: string | null = null;
+    try {
+      queueJobId = await schedulePost({ postId, orgId, scheduledAt });
+    } catch (err) {
+      if (err instanceof SchedulerValidationError) {
+        return NextResponse.json({ error: err.message }, { status: 400 });
+      }
+      // Queue unavailable — continue with DB-only state; cron sweep will
+      // pick it up from scheduled_at.
+      logger.error("schedule: enqueue failed, falling back to DB", err);
+    }
+
     const { data: post, error } = await supabase
       .from("posts")
       .update({
         status: "scheduled",
         scheduled_at: scheduledAt,
+        queue_job_id: queueJobId,
         updated_at: new Date(),
       })
       .eq("id", postId)
       .select()
       .single();
 
-    if (error) {
-      throw error;
-    }
+    if (error) throw error;
 
     return NextResponse.json({ post });
   } catch (error) {

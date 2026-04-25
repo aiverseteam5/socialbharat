@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { processScheduledPosts } from "@/lib/scheduler";
+import { triggerScheduledPostSweep } from "@/lib/queue/scheduler";
 import { logger } from "@/lib/logger";
 
 /**
- * GET /api/cron/publish
- * Vercel Cron job handler for publishing scheduled posts
- * Protected by CRON_SECRET environment variable
+ * POST /api/cron/publish
+ *
+ * V3 Phase 3B — VPS crontab runs this every minute. Instead of running
+ * `processScheduledPosts()` synchronously inside the request (as in V2),
+ * we enqueue a BullMQ sweep job and return 200 immediately. The publish
+ * worker picks up the sweep + any per-post delayed jobs.
+ *
+ * Protected by CRON_SECRET (Bearer). GET is kept as an alias for tooling
+ * that can't POST (curl on old boxes, GitHub Actions step).
  */
-export async function GET(request: NextRequest) {
-  // Verify CRON_SECRET for security
+async function run(request: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
   const authHeader = request.headers.get("authorization");
 
@@ -24,17 +29,16 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const result = await processScheduledPosts();
-
-    return NextResponse.json({
-      success: true,
-      ...result,
-    });
+    const jobId = await triggerScheduledPostSweep();
+    return NextResponse.json({ success: true, jobId });
   } catch (error) {
-    logger.error("Cron publish job failed", error);
+    logger.error("Cron publish enqueue failed", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Cron job failed" },
       { status: 500 },
     );
   }
 }
+
+export const POST = run;
+export const GET = run;
