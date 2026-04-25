@@ -33,9 +33,12 @@ const schema = z.object({
   UPSTASH_REDIS_REST_TOKEN: z
     .string()
     .min(1, "UPSTASH_REDIS_REST_TOKEN is required"),
-  // Phase 2 — add before enabling BullMQ/Inngest workers
-  INNGEST_SIGNING_KEY: z.string().optional(),
-  INNGEST_EVENT_KEY: z.string().optional(),
+  // Self-hosted Redis for BullMQ (VPS). Required when workers run;
+  // optional in local dev where queue features may be disabled.
+  REDIS_URL: z
+    .string()
+    .url("REDIS_URL must be a valid redis:// URL")
+    .optional(),
 
   // ── Payments ──────────────────────────────────────────────────────────────
   RAZORPAY_KEY_ID: z.string().min(1, "RAZORPAY_KEY_ID is required"),
@@ -48,6 +51,15 @@ const schema = z.object({
 
   // ── AI ────────────────────────────────────────────────────────────────────
   OPENAI_API_KEY: z.string().min(1, "OPENAI_API_KEY is required"),
+  ANTHROPIC_API_KEY: z.string().min(1, "ANTHROPIC_API_KEY is required"),
+  // V3 Phase 4A — agent orchestrator safety rails.
+  // AGENT_MAX_STEPS caps the orchestrator loop; AGENT_HUMAN_APPROVAL gates
+  // queued publishing behind plan approval.
+  AGENT_MAX_STEPS: z.coerce.number().int().positive().default(20),
+  AGENT_HUMAN_APPROVAL: z
+    .enum(["true", "false"])
+    .default("true")
+    .transform((v) => v === "true"),
 
   // ── Email ─────────────────────────────────────────────────────────────────
   RESEND_API_KEY: z.string().min(1, "RESEND_API_KEY is required"),
@@ -93,11 +105,15 @@ function formatEnvError(error: z.ZodError): string {
       key.includes("APP_URL")
     )
       group = "core";
-    else if (key.includes("UPSTASH") || key.includes("INNGEST"))
-      group = "queue";
+    else if (key.includes("UPSTASH") || key === "REDIS_URL") group = "queue";
     else if (key.includes("RAZORPAY") || key.includes("STRIPE"))
       group = "payments";
-    else if (key.includes("OPENAI")) group = "ai";
+    else if (
+      key.includes("OPENAI") ||
+      key.includes("ANTHROPIC") ||
+      key.startsWith("AGENT_")
+    )
+      group = "ai";
     else if (key.includes("RESEND")) group = "email";
     else if (key.includes("MSG91")) group = "sms";
     else if (

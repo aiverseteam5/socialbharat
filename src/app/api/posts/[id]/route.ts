@@ -1,5 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { updatePostSchema } from "@/types/schemas";
+import {
+  cancelScheduledPost,
+  schedulePost,
+  SchedulerValidationError,
+} from "@/lib/queue/scheduler";
+import { logger } from "@/lib/logger";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -214,13 +220,18 @@ export async function DELETE(
     // Verify post belongs to org
     const { data: existingPost } = await supabase
       .from("posts")
-      .select("id")
+      .select("id, queue_job_id")
       .eq("id", postId)
       .eq("org_id", orgId)
       .single();
 
     if (!existingPost) {
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
+    }
+
+    // Drop any pending BullMQ delayed job before deleting the row.
+    if (existingPost.queue_job_id) {
+      await cancelScheduledPost(existingPost.queue_job_id);
     }
 
     // Delete post
@@ -279,7 +290,7 @@ export async function PATCH(
 
     const { data: existingPost } = await supabase
       .from("posts")
-      .select("status")
+      .select("status, queue_job_id")
       .eq("id", id)
       .eq("org_id", orgMember.org_id)
       .single();
@@ -298,11 +309,33 @@ export async function PATCH(
       );
     }
 
+    const newScheduledAt = new Date(parsed.scheduled_at);
+
+    // Cancel any existing delayed job, then re-enqueue with the new delay.
+    if (existingPost.queue_job_id) {
+      await cancelScheduledPost(existingPost.queue_job_id);
+    }
+
+    let queueJobId: string | null = null;
+    try {
+      queueJobId = await schedulePost({
+        postId: id,
+        orgId: orgMember.org_id,
+        scheduledAt: newScheduledAt,
+      });
+    } catch (err) {
+      if (err instanceof SchedulerValidationError) {
+        return NextResponse.json({ error: err.message }, { status: 400 });
+      }
+      logger.error("reschedule: enqueue failed, falling back to DB", err);
+    }
+
     const { data: post, error } = await supabase
       .from("posts")
       .update({
-        scheduled_at: new Date(parsed.scheduled_at),
+        scheduled_at: newScheduledAt,
         status: "scheduled",
+        queue_job_id: queueJobId,
         updated_at: new Date(),
       })
       .eq("id", id)
