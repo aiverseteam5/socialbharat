@@ -8,7 +8,7 @@ export function DevUpgradeModalTrigger() {
     <button
       type="button"
       onClick={() => open(FEATURE_GATES.AI_CONTENT)}
-      className="inline-flex items-center gap-2 rounded-md border border-dashed border-orange-300 bg-orange-50 px-3 py-1.5 text-xs font-medium text-orange-700 transition-colors hover:bg-orange-100"
+      className="inline-flex items-center gap-2 rounded-md border border-dashed border-blue-300 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-100"
     >
       <span>🧪</span>
       [Dev] Test Upgrade Modal

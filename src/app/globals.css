@@ -4,51 +4,56 @@
 
 @layer base {
   :root {
-    /* page bg: slate-50, cards: white */
-    --background: 210 40% 97%;
-    --foreground: 215 25% 12%;
+    /* surfaces */
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
     --card: 0 0% 100%;
-    --card-foreground: 215 25% 12%;
+    --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 12%;
-    /* primary: saffron #FF6B00 → hsl(25 100% 50%) */
-    --primary: 25 100% 50%;
+    --popover-foreground: 222 47% 11%;
+    /* primary: SocialBharat blue #3B82F6 */
+    --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
     --secondary: 210 40% 96%;
-    --secondary-foreground: 215 25% 20%;
+    --secondary-foreground: 222 47% 16%;
     --muted: 210 40% 96%;
     --muted-foreground: 215 16% 47%;
     --accent: 210 40% 94%;
-    --accent-foreground: 215 25% 20%;
-    /* error: red-500 */
+    --accent-foreground: 222 47% 16%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 25 100% 50%;
-    --radius: 0.5rem;
+    --ring: 217 91% 60%;
+    --radius: 0.75rem;
+
+    /* brand stops (used by raw CSS gradients outside Tailwind) */
+    --brand-500: #3b82f6;
+    --brand-600: #2563eb;
+    --accent-500: #8b5cf6;
+    --indigo-500: #6366f1;
   }
 
   .dark {
-    --background: 222 47% 7%;
+    --background: 222 47% 6%;
     --foreground: 210 40% 98%;
-    --card: 222 47% 10%;
+    --card: 222 47% 9%;
     --card-foreground: 210 40% 98%;
-    --popover: 222 47% 10%;
+    --popover: 222 47% 9%;
     --popover-foreground: 210 40% 98%;
-    --primary: 25 100% 55%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 217 33% 17%;
+    --primary: 217 91% 65%;
+    --primary-foreground: 222 47% 8%;
+    --secondary: 217 33% 14%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 217 33% 17%;
+    --muted: 217 33% 14%;
     --muted-foreground: 215 20% 65%;
-    --accent: 217 33% 17%;
+    --accent: 217 33% 14%;
     --accent-foreground: 210 40% 98%;
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 63% 45%;
+    --destructive-foreground: 0 0% 100%;
     --border: 217 33% 17%;
     --input: 217 33% 17%;
-    --ring: 25 100% 55%;
+    --ring: 217 91% 65%;
   }
 }
 
@@ -56,35 +61,177 @@
   * {
     @apply border-border;
   }
-  body {
-    @apply bg-background text-foreground;
+  html {
+    scroll-behavior: smooth;
   }
-  /* Smooth focus rings */
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings:
+      "cv02", "cv03", "cv04", "cv11";
+  }
   :focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+  ::selection {
+    background-color: rgb(59 130 246 / 0.25);
   }
 }
 
 @layer utilities {
-  /* Micro-interaction: button press */
-  .btn-press {
-    @apply active:scale-[0.98] transition-transform duration-150;
+  /* Brand gradient text */
+  .text-gradient-brand {
+    background: linear-gradient(
+      135deg,
+      var(--brand-500) 0%,
+      var(--indigo-500) 50%,
+      var(--accent-500) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
   }
-  /* Fade-in for page transitions */
+
+  /* Animated brand gradient (for hero backgrounds, CTAs) */
+  .bg-brand-gradient-animated {
+    background: linear-gradient(
+      135deg,
+      #3b82f6 0%,
+      #6366f1 25%,
+      #8b5cf6 50%,
+      #6366f1 75%,
+      #3b82f6 100%
+    );
+    background-size: 200% 200%;
+    animation: gradient-shift 8s ease infinite;
+    color: #ffffff;
+  }
+  .bg-brand-gradient-animated:hover {
+    filter: brightness(1.05);
+  }
+
+  /* Glass-morphism panel */
+  .glass-panel {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+  }
+  .dark .glass-panel {
+    background: rgba(15, 23, 42, 0.55);
+    border-color: rgba(148, 163, 184, 0.12);
+  }
+
+  /* Soft glow for hero CTAs */
+  .shadow-brand-glow {
+    box-shadow:
+      0 10px 30px -10px rgba(59, 130, 246, 0.5),
+      0 4px 14px -4px rgba(139, 92, 246, 0.35);
+  }
+
+  /* Button press */
+  .btn-press {
+    @apply transition-transform duration-150 active:scale-[0.98];
+  }
+
+  /* Page fade-in */
   .page-fade {
     animation: pageFadeIn 0.18s ease-out;
+  }
+
+  /* Soft mesh background — used on hero/auth */
+  .bg-mesh-brand {
+    background-color: hsl(var(--background));
+    background-image:
+      radial-gradient(
+        circle at 18% 12%,
+        rgba(59, 130, 246, 0.18),
+        transparent 45%
+      ),
+      radial-gradient(
+        circle at 82% 18%,
+        rgba(139, 92, 246, 0.16),
+        transparent 50%
+      ),
+      radial-gradient(
+        circle at 50% 92%,
+        rgba(99, 102, 241, 0.14),
+        transparent 55%
+      );
+  }
+  .dark .bg-mesh-brand {
+    background-image:
+      radial-gradient(
+        circle at 18% 12%,
+        rgba(59, 130, 246, 0.28),
+        transparent 45%
+      ),
+      radial-gradient(
+        circle at 82% 18%,
+        rgba(139, 92, 246, 0.26),
+        transparent 50%
+      ),
+      radial-gradient(
+        circle at 50% 92%,
+        rgba(99, 102, 241, 0.22),
+        transparent 55%
+      );
+  }
+
+  /* Subtle grid for marketing hero */
+  .bg-grid-pattern {
+    background-image:
+      linear-gradient(to right, rgba(15, 23, 42, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(15, 23, 42, 0.05) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(
+      ellipse at center,
+      black 30%,
+      transparent 75%
+    );
+    -webkit-mask-image: radial-gradient(
+      ellipse at center,
+      black 30%,
+      transparent 75%
+    );
+  }
+  .dark .bg-grid-pattern {
+    background-image:
+      linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  }
+
+  /* Shimmer for skeletons */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 0%,
+      hsl(var(--accent)) 50%,
+      hsl(var(--muted)) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2.4s linear infinite;
   }
 }
 
 @keyframes pageFadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-/* Marketing landing page animations */
 @keyframes marquee {
-  from { transform: translateX(0); }
-  to   { transform: translateX(-50%); }
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
 }
 .animate-marquee {
   animation: marquee 28s linear infinite;
@@ -92,10 +239,22 @@
 }
 
 @keyframes toastSlideIn {
-  0%   { opacity: 0; transform: translateY(20px); }
-  15%  { opacity: 1; transform: translateY(0); }
-  80%  { opacity: 1; transform: translateY(0); }
-  100% { opacity: 0; transform: translateY(10px); }
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  80% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
 }
 .animate-toast {
   opacity: 0;
@@ -103,20 +262,14 @@
 }
 
 @keyframes livePulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }
-  50%      { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+  }
 }
 .animate-live-pulse {
   animation: livePulse 1.8s ease-out infinite;
-}
-
-.bg-grid-pattern {
-  background-image:
-    linear-gradient(to right, rgba(15, 23, 42, 0.04) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(15, 23, 42, 0.04) 1px, transparent 1px);
-  background-size: 40px 40px;
-}
-
-html {
-  scroll-behavior: smooth;
 }

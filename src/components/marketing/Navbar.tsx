@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Menu } from "lucide-react";
@@ -11,6 +10,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { Logo } from "@/components/ui/logo";
 
 const NAV_LINKS = [
   { label: "Features", href: "#features" },
@@ -35,20 +35,13 @@ export function MarketingNavbar() {
       className={[
         "sticky top-0 z-50 transition-all duration-200",
         scrolled
-          ? "bg-white/95 backdrop-blur-sm shadow-sm border-b border-slate-100"
+          ? "border-b border-slate-200/70 bg-white/80 shadow-sm backdrop-blur-md"
           : "bg-transparent",
       ].join(" ")}
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
         <Link href="/" className="flex items-center">
-          <Image
-            src="/logo.svg"
-            alt="SocialBharat"
-            width={180}
-            height={36}
-            priority
-            className="h-8 w-auto"
-          />
+          <Logo size="md" />
         </Link>
 
         <nav className="hidden items-center gap-8 md:flex">
@@ -72,8 +65,7 @@ export function MarketingNavbar() {
           </Link>
           <Link
             href="/register"
-            className="rounded-md px-4 py-2 text-sm font-semibold text-white shadow transition-all hover:shadow-md active:scale-[0.98]"
-            style={{ backgroundColor: "#FF6B35" }}
+            className="bg-brand-gradient-animated shadow-brand-glow inline-flex items-center rounded-lg px-4 py-2 text-sm font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
             Start Free Trial
           </Link>
@@ -88,13 +80,7 @@ export function MarketingNavbar() {
             <SheetContent side="right" className="w-[260px]">
               <SheetHeader>
                 <SheetTitle>
-                  <Image
-                    src="/logo.svg"
-                    alt="SocialBharat"
-                    width={160}
-                    height={32}
-                    className="h-7 w-auto"
-                  />
+                  <Logo size="sm" />
                 </SheetTitle>
               </SheetHeader>
               <div className="mt-6 flex flex-col gap-1">
@@ -119,8 +105,7 @@ export function MarketingNavbar() {
                 <Link
                   href="/register"
                   onClick={() => setOpen(false)}
-                  className="mt-1 rounded-md px-3 py-2 text-center text-sm font-semibold text-white shadow"
-                  style={{ backgroundColor: "#FF6B35" }}
+                  className="bg-brand-gradient-animated shadow-brand-glow mt-1 rounded-lg px-3 py-2 text-center text-sm font-semibold text-white"
                 >
                   Start Free Trial
                 </Link>

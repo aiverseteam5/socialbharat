@@ -65,7 +65,7 @@ function PlatformCard({
       case "youtube":
         return "bg-red-600";
       case "whatsapp":
-        return "bg-green-500";
+        return "bg-emerald-500";
       default:
         return "bg-gray-600";
     }

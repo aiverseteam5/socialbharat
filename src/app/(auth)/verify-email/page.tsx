@@ -4,9 +4,9 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/ui/logo";
 import { createClient } from "@/lib/supabase/client";
 
-const ORANGE = "#FF6B35";
 const RESEND_COOLDOWN_SECONDS = 60;
 
 export default function VerifyEmailPage() {
@@ -78,18 +78,12 @@ function VerifyEmailInner() {
   return (
     <div className="flex flex-col items-center">
       <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold">
-          <span className="text-slate-800">Social</span>
-          <span style={{ color: ORANGE }}>Bharat</span>
-          <span aria-hidden className="ml-1">
-            🇮🇳
-          </span>
-        </h1>
+        <Logo variant="default" size="md" />
       </div>
 
       <div className="max-w-md mx-auto space-y-6 text-center">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-orange-100">
-          <Mail className="h-8 w-8" style={{ color: ORANGE }} />
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-50">
+          <Mail className="h-8 w-8 text-blue-600" />
         </div>
 
         <div>
@@ -107,8 +101,7 @@ function VerifyEmailInner() {
         </div>
 
         <Button
-          className="w-full gap-2 font-semibold text-white"
-          style={{ backgroundColor: ORANGE }}
+          className="w-full gap-2 font-semibold text-white bg-brand-gradient-animated hover:opacity-95"
           disabled={!email || cooldown > 0 || status === "sending"}
           onClick={handleResend}
         >

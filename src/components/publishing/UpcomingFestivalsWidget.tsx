@@ -17,11 +17,11 @@ function daysUntil(dateStr: string): number {
 }
 
 const TYPE_COLORS: Record<string, string> = {
-  national: "bg-orange-100 text-orange-700",
+  national: "bg-blue-100 text-blue-700",
   religious: "bg-purple-100 text-purple-700",
-  commercial: "bg-blue-100 text-blue-700",
-  regional: "bg-green-100 text-green-700",
-  sporting: "bg-red-100 text-red-700",
+  commercial: "bg-sky-100 text-sky-700",
+  regional: "bg-emerald-100 text-emerald-700",
+  sporting: "bg-amber-100 text-amber-700",
 };
 
 export function UpcomingFestivalsWidget() {
@@ -53,7 +53,7 @@ export function UpcomingFestivalsWidget() {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <CalendarDays className="w-4 h-4 text-orange-500" />
+            <CalendarDays className="w-4 h-4 text-blue-600" />
             Upcoming Festivals
           </CardTitle>
         </CardHeader>
@@ -74,7 +74,7 @@ export function UpcomingFestivalsWidget() {
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-sm font-semibold flex items-center gap-2">
-          <CalendarDays className="w-4 h-4 text-orange-500" />
+          <CalendarDays className="w-4 h-4 text-blue-600" />
           Upcoming Festivals
         </CardTitle>
       </CardHeader>

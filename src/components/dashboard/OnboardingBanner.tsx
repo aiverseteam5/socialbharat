@@ -28,14 +28,14 @@ export function OnboardingBanner({
   if (accountType === "individual") {
     return (
       <Banner
-        icon={<Plug className="h-5 w-5 text-orange-600" />}
-        bg="bg-orange-50 border-orange-200"
+        icon={<Plug className="h-5 w-5 text-blue-600" />}
+        bg="bg-blue-50 border-blue-200"
         text={
           <>
-            <span className="font-semibold text-orange-900">
+            <span className="font-semibold text-blue-900">
               Connect your first social account
             </span>{" "}
-            <span className="text-orange-700">
+            <span className="text-blue-700">
               to start publishing and tracking analytics.
             </span>
           </>
@@ -43,7 +43,7 @@ export function OnboardingBanner({
         cta={
           <Link
             href="/settings/social-accounts"
-            className="shrink-0 rounded-lg bg-orange-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-orange-600"
+            className="shrink-0 rounded-lg bg-brand-gradient-animated px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-95"
           >
             Connect Account
           </Link>

@@ -100,7 +100,7 @@ export default function SocialAccountsPage() {
       name: "WhatsApp",
       Icon: FaWhatsapp,
       color: "#25D366",
-      bg: "bg-green-50",
+      bg: "bg-emerald-50",
     },
   ];
 
@@ -130,7 +130,7 @@ export default function SocialAccountsPage() {
                   <platform.Icon size={22} color={platform.color} aria-hidden />
                 </div>
                 {connectedProfile ? (
-                  <CheckCircle className="w-5 h-5 text-green-500" />
+                  <CheckCircle className="w-5 h-5 text-emerald-500" />
                 ) : (
                   <XCircle className="w-5 h-5 text-gray-400" />
                 )}
@@ -145,7 +145,7 @@ export default function SocialAccountsPage() {
                   </p>
                   <div className="flex items-center gap-2">
                     <span
-                      className={`text-xs px-2 py-0.5 rounded ${connectedProfile.is_healthy ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}
+                      className={`text-xs px-2 py-0.5 rounded ${connectedProfile.is_healthy ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"}`}
                     >
                       {connectedProfile.is_healthy ? "Connected" : "Error"}
                     </span>

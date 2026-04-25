@@ -181,13 +181,13 @@ function PricingCard({
     <Card
       className={`relative flex flex-col p-6 ${
         plan.highlight
-          ? "border-2 border-orange-500 shadow-xl"
+          ? "border-2 border-blue-600 shadow-xl"
           : "border border-border"
       }`}
     >
       {plan.badge && (
         <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-          <Badge className="bg-orange-500 text-white px-3 py-1 text-xs font-semibold">
+          <Badge className="bg-brand-gradient-animated text-white px-3 py-1 text-xs font-semibold border-0">
             {plan.badge}
           </Badge>
         </div>
@@ -214,7 +214,7 @@ function PricingCard({
                 <p className="text-xs text-muted-foreground mt-1">
                   Billed as {yearly}
                   {cycle === "annual" && (
-                    <span className="ml-1 text-green-600 font-medium">
+                    <span className="ml-1 text-emerald-600 font-medium">
                       · Save ₹
                       {(
                         (plan.monthlyPaise! * 12 - plan.yearlyPaise!) /
@@ -232,7 +232,7 @@ function PricingCard({
       <ul className="flex-1 space-y-2.5 mb-6">
         {plan.features.map((f) => (
           <li key={f} className="flex items-start gap-2">
-            <Check className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
+            <Check className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
             <span className="text-sm text-muted-foreground">{f}</span>
           </li>
         ))}
@@ -243,7 +243,7 @@ function PricingCard({
         variant={plan.ctaVariant}
         className={`w-full ${
           plan.highlight
-            ? "bg-orange-500 hover:bg-orange-600 text-white border-0"
+            ? "bg-brand-gradient-animated hover:opacity-95 text-white border-0"
             : ""
         }`}
       >
@@ -279,7 +279,7 @@ export default function PricingPage() {
               onClick={() => setAudience("creators")}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${
                 audience === "creators"
-                  ? "bg-orange-500 text-white shadow"
+                  ? "bg-brand-gradient-animated text-white shadow"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -289,7 +289,7 @@ export default function PricingPage() {
               onClick={() => setAudience("teams")}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${
                 audience === "teams"
-                  ? "bg-orange-500 text-white shadow"
+                  ? "bg-brand-gradient-animated text-white shadow"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -320,7 +320,7 @@ export default function PricingPage() {
               }`}
             >
               Annual
-              <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-normal">
+              <span className="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-normal">
                 Save 20%
               </span>
             </button>

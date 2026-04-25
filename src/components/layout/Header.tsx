@@ -18,6 +18,7 @@ import { Menu } from "lucide-react";
 import { useAuthStore } from "@/stores/auth-store";
 import { LanguageSwitcher } from "@/components/common/LanguageSwitcher";
 import { NotificationBell } from "@/components/layout/NotificationBell";
+import { Logo } from "@/components/ui/logo";
 import { t, getLocale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { SIDEBAR_NAV_ITEMS } from "./nav-items";
@@ -34,7 +35,7 @@ export function Header() {
   const orgName = (currentOrg as { name?: string })?.name || "Organisation";
 
   return (
-    <header className="bg-white border-b border-slate-200 h-16 px-4 flex items-center justify-between shrink-0">
+    <header className="bg-white border-b border-[#E2E8F0] h-16 px-4 flex items-center justify-between shrink-0">
       {/* Left: hamburger (mobile) */}
       <div className="flex items-center gap-3">
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -48,16 +49,9 @@ export function Header() {
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="bg-[#0f172a] p-0 w-64">
-            <div className="flex items-center gap-2.5 h-16 px-5 border-b border-slate-800">
-              <div className="h-7 w-7 rounded-md bg-brand-600 flex items-center justify-center shrink-0">
-                <span className="text-white font-bold text-xs leading-none">
-                  SB
-                </span>
-              </div>
-              <span className="font-semibold text-slate-100 tracking-tight text-sm">
-                Social<span className="text-brand-400">Bharat</span>
-              </span>
+          <SheetContent side="left" className="bg-[#0F172A] p-0 w-64">
+            <div className="flex items-center h-16 px-5 border-b border-white/10">
+              <Logo variant="white" size="md" />
             </div>
             <nav className="px-3 py-4 space-y-0.5">
               {SIDEBAR_NAV_ITEMS.map((item) => {
@@ -75,14 +69,14 @@ export function Header() {
                     className={cn(
                       "group relative flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
                       isActive
-                        ? "bg-slate-800 text-slate-100"
-                        : "text-slate-400 hover:bg-slate-800/70 hover:text-slate-200",
+                        ? "bg-blue-600/20 text-white border-l-2 border-blue-500 pl-[10px]"
+                        : "text-slate-400 hover:bg-white/5 hover:text-white",
                     )}
                   >
                     <Icon
                       className={cn(
                         "h-4 w-4 shrink-0",
-                        isActive ? "text-brand-400" : "text-slate-500",
+                        isActive ? "text-blue-400" : "text-slate-500",
                       )}
                     />
                     {name}
