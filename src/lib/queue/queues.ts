@@ -4,6 +4,8 @@
  * V3 Phase 3B scope: publish / metrics / token-refresh / notification.
  * V3 Phase 4A adds `agent` for agentic AI fan-out — cron routes enqueue one
  * job per opted-in org so the cron handler stays fast.
+ * V3 Phase 4E adds `broadcast` for WhatsApp campaign fan-out — one fan-out
+ * job per campaign, then one send-one job per recipient (rate-limited).
  */
 import { Queue, QueueEvents, type JobsOptions } from "bullmq";
 import { getRedisConnection } from "./connection";
@@ -14,6 +16,7 @@ export const QUEUE_NAMES = {
   tokenRefresh: "token-refresh",
   notification: "notification",
   agent: "agent",
+  broadcast: "broadcast",
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
@@ -63,6 +66,20 @@ export interface AgentJobData {
   triggeredBy?: "cron" | "manual";
 }
 
+export interface BroadcastJobData {
+  /**
+   * - fan-out: paginate pending recipients of a campaign and enqueue
+   *   one send-one job per recipient. One per campaign at start.
+   * - send-one: send the template to a single recipient and write back
+   *   platform_message_id + status.
+   */
+  kind: "fan-out" | "send-one";
+  campaignId: string;
+  orgId: string;
+  /** Required for kind="send-one". */
+  recipientId?: string;
+}
+
 // ── Shared defaults ─────────────────────────────────────────────────────────
 
 const defaultJobOptions: JobsOptions = {
@@ -81,6 +98,7 @@ let _metrics: Queue<MetricsJobData> | null = null;
 let _tokenRefresh: Queue<TokenRefreshJobData> | null = null;
 let _notification: Queue<NotificationJobData> | null = null;
 let _agent: Queue<AgentJobData> | null = null;
+let _broadcast: Queue<BroadcastJobData> | null = null;
 
 export function publishQueue(): Queue<PublishJobData> {
   if (!_publish) {
@@ -137,6 +155,16 @@ export function agentQueue(): Queue<AgentJobData> {
   return _agent;
 }
 
+export function broadcastQueue(): Queue<BroadcastJobData> {
+  if (!_broadcast) {
+    _broadcast = new Queue<BroadcastJobData>(QUEUE_NAMES.broadcast, {
+      connection: getRedisConnection(),
+      defaultJobOptions,
+    });
+  }
+  return _broadcast;
+}
+
 export function allQueues(): Queue[] {
   return [
     publishQueue(),
@@ -144,15 +172,29 @@ export function allQueues(): Queue[] {
     tokenRefreshQueue(),
     notificationQueue(),
     agentQueue(),
+    broadcastQueue(),
   ];
 }
 
 export async function closeQueues(): Promise<void> {
-  const queues = [_publish, _metrics, _tokenRefresh, _notification, _agent];
+  const queues = [
+    _publish,
+    _metrics,
+    _tokenRefresh,
+    _notification,
+    _agent,
+    _broadcast,
+  ];
   for (const q of queues) {
     if (q) await q.close();
   }
-  _publish = _metrics = _tokenRefresh = _notification = _agent = null;
+  _publish =
+    _metrics =
+    _tokenRefresh =
+    _notification =
+    _agent =
+    _broadcast =
+      null;
 }
 
 /**
@@ -160,7 +202,13 @@ export async function closeQueues(): Promise<void> {
  * current (mock) connection from `setRedisConnection`.
  */
 export function _resetQueueSingletonsForTests(): void {
-  _publish = _metrics = _tokenRefresh = _notification = _agent = null;
+  _publish =
+    _metrics =
+    _tokenRefresh =
+    _notification =
+    _agent =
+    _broadcast =
+      null;
 }
 
 // Re-export BullMQ event types for worker files.

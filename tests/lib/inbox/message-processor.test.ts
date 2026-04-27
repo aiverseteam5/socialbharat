@@ -13,6 +13,9 @@ interface TableState {
   insertCalls: Array<Record<string, unknown>>;
   upsertCalls: Array<Record<string, unknown>>;
   upsertOpts: Array<Record<string, unknown> | undefined>;
+  isCalls: Array<{ col: string; val: unknown }>;
+  eqCalls: Array<{ col: string; val: unknown }>;
+  inCalls: Array<{ col: string; vals: unknown[] }>;
 }
 
 const state: Record<string, TableState> = {};
@@ -24,6 +27,9 @@ function table(name: string): TableState {
       insertCalls: [],
       upsertCalls: [],
       upsertOpts: [],
+      isCalls: [],
+      eqCalls: [],
+      inCalls: [],
     };
   }
   return state[name]!;
@@ -67,8 +73,29 @@ function buildQuery(name: string) {
     },
     update: (payload: Record<string, unknown>) => {
       t.updateCalls.push(payload);
+      // .eq() must be awaitable (existing last_message_at bump) AND
+      // chainable into .is() (opt-out: .eq().is()) AND .in() (broadcast
+      // recipient status: .eq().in()).
+      const eqResult: { data: null; error: null } = { data: null, error: null };
+      const eqChain = {
+        is: (col: string, val: unknown) => {
+          t.isCalls.push({ col, val });
+          return Promise.resolve(eqResult);
+        },
+        in: (col: string, vals: unknown[]) => {
+          t.inCalls.push({ col, vals });
+          return Promise.resolve(eqResult);
+        },
+        then: (
+          onFulfilled?: (v: typeof eqResult) => unknown,
+          onRejected?: (e: unknown) => unknown,
+        ) => Promise.resolve(eqResult).then(onFulfilled, onRejected),
+      };
       return {
-        eq: () => Promise.resolve({ data: null, error: null }),
+        eq: (col: string, val: unknown) => {
+          t.eqCalls.push({ col, val });
+          return eqChain;
+        },
       };
     },
     select: () => {
@@ -244,6 +271,88 @@ describe("processIncomingMessage", () => {
     };
     await expect(processIncomingMessage(baseIncoming)).rejects.toThrow();
   });
+
+  describe("STOP-keyword opt-out", () => {
+    function seedHappyPath() {
+      table("contacts").upsertResult = {
+        data: { id: "contact-1" },
+        error: null,
+      };
+      table("conversations").selectMaybeSingle = { data: null, error: null };
+      table("conversations").insertResult = {
+        data: { id: "conv-1" },
+        error: null,
+      };
+      table("messages").selectMaybeSingle = { data: null, error: null };
+      table("messages").insertResult = { data: { id: "msg-1" }, error: null };
+    }
+
+    it("WhatsApp STOP message marks contact opted_out_at", async () => {
+      seedHappyPath();
+      await processIncomingMessage({
+        ...baseIncoming,
+        platform: "whatsapp",
+        message: { ...baseIncoming.message, content: "STOP" },
+      });
+
+      // contacts.update is called once for opt-out (conversations.update is
+      // for last_message_at on a different table).
+      const optOutCalls = table("contacts").updateCalls;
+      expect(optOutCalls).toHaveLength(1);
+      expect(optOutCalls[0]).toHaveProperty("opted_out_at");
+      // .is(opted_out_at, null) guard — repeat STOPs are SQL no-ops.
+      expect(table("contacts").isCalls).toContainEqual({
+        col: "opted_out_at",
+        val: null,
+      });
+      // Message still recorded — STOP doesn't short-circuit processing.
+      expect(table("messages").insertCalls).toHaveLength(1);
+    });
+
+    it("matches STOP variants case-insensitively", async () => {
+      for (const text of [
+        "stop",
+        "STOP",
+        "  Stop  ",
+        "unsubscribe",
+        "REMOVE",
+        "Cancel",
+      ]) {
+        for (const key of Object.keys(state)) delete state[key];
+        seedHappyPath();
+        await processIncomingMessage({
+          ...baseIncoming,
+          platform: "whatsapp",
+          message: { ...baseIncoming.message, content: text },
+        });
+        expect(
+          table("contacts").updateCalls,
+          `expected ${JSON.stringify(text)} to trigger opt-out`,
+        ).toHaveLength(1);
+      }
+    });
+
+    it("non-STOP message does not opt the contact out", async () => {
+      seedHappyPath();
+      await processIncomingMessage({
+        ...baseIncoming,
+        platform: "whatsapp",
+        message: { ...baseIncoming.message, content: "Hi, I have a question" },
+      });
+      expect(table("contacts").updateCalls).toHaveLength(0);
+    });
+
+    it("STOP on a non-WhatsApp platform is ignored", async () => {
+      seedHappyPath();
+      await processIncomingMessage({
+        ...baseIncoming,
+        platform: "facebook",
+        message: { ...baseIncoming.message, content: "STOP" },
+      });
+      // Opt-out is WhatsApp-scoped; FB STOP must not flip the flag.
+      expect(table("contacts").updateCalls).toHaveLength(0);
+    });
+  });
 });
 
 describe("applyMessageStatusUpdate", () => {
@@ -293,5 +402,60 @@ describe("applyMessageStatusUpdate", () => {
         timestamp: new Date(),
       }),
     ).rejects.toThrow();
+  });
+
+  describe("broadcast recipient mirror", () => {
+    beforeEach(() => {
+      delete state.whatsapp_broadcast_recipients;
+    });
+
+    it("mirrors 'sent' onto the recipient row", async () => {
+      await applyMessageStatusUpdate({
+        platformMessageId: "wamid.SENT1",
+        status: "sent",
+        timestamp: new Date("2026-04-17T10:00:00Z"),
+      });
+      const t = table("whatsapp_broadcast_recipients");
+      expect(t.updateCalls).toEqual([{ status: "sent" }]);
+      expect(t.eqCalls).toEqual([
+        { col: "platform_message_id", val: "wamid.SENT1" },
+      ]);
+      expect(t.inCalls).toEqual([{ col: "status", vals: ["pending"] }]);
+    });
+
+    it("mirrors 'delivered' with allowed-from set [pending, sent]", async () => {
+      await applyMessageStatusUpdate({
+        platformMessageId: "wamid.DEL1",
+        status: "delivered",
+        timestamp: new Date(),
+      });
+      const t = table("whatsapp_broadcast_recipients");
+      expect(t.inCalls).toEqual([{ col: "status", vals: ["pending", "sent"] }]);
+    });
+
+    it("mirrors 'read' with allowed-from set [pending, sent, delivered]", async () => {
+      await applyMessageStatusUpdate({
+        platformMessageId: "wamid.READ1",
+        status: "read",
+        timestamp: new Date(),
+      });
+      const t = table("whatsapp_broadcast_recipients");
+      expect(t.inCalls).toEqual([
+        { col: "status", vals: ["pending", "sent", "delivered"] },
+      ]);
+    });
+
+    it("mirrors 'failed' with allowed-from set excluding 'skipped'", async () => {
+      await applyMessageStatusUpdate({
+        platformMessageId: "wamid.FAIL1",
+        status: "failed",
+        timestamp: new Date(),
+      });
+      const t = table("whatsapp_broadcast_recipients");
+      // 'skipped' is intentionally absent — operator cancellations stay sticky.
+      expect(t.inCalls).toEqual([
+        { col: "status", vals: ["pending", "sent", "delivered", "read"] },
+      ]);
+    });
   });
 });

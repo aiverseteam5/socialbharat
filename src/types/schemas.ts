@@ -470,6 +470,108 @@ export const updateLeadSchema = z.object({
 });
 
 // ============================================
+// WHATSAPP BROADCAST SCHEMAS
+// ============================================
+
+export const waTemplateStatusEnum = z.enum([
+  "draft",
+  "approved",
+  "paused",
+  "rejected",
+]);
+
+export const waTemplateCategoryEnum = z.enum([
+  "MARKETING",
+  "UTILITY",
+  "AUTHENTICATION",
+]);
+
+// Returns the highest {{N}} index in the body — also the canonical
+// variable_count. {{0}} is invalid; we floor at 0 (meaning "no variables").
+export function countTemplateVariables(body: string): number {
+  let max = 0;
+  for (const match of body.matchAll(/\{\{\s*(\d+)\s*\}\}/g)) {
+    const captured = match[1];
+    if (!captured) continue;
+    const n = Number(captured);
+    if (n > max) max = n;
+  }
+  return max;
+}
+
+export const createWhatsappTemplateSchema = z.object({
+  name: z
+    .string()
+    .min(1)
+    .max(512)
+    .regex(
+      /^[a-z0-9_]+$/,
+      "Template name must use lowercase letters, numbers, and underscores",
+    ),
+  language: z
+    .string()
+    .regex(
+      /^[a-z]{2}(_[A-Z]{2})?$/,
+      "Language must be a code like 'en', 'hi', or 'en_US'",
+    ),
+  category: waTemplateCategoryEnum,
+  body: z.string().min(1).max(1024),
+  status: waTemplateStatusEnum.default("approved"),
+});
+
+export const updateWhatsappTemplateSchema = z.object({
+  name: createWhatsappTemplateSchema.shape.name.optional(),
+  language: createWhatsappTemplateSchema.shape.language.optional(),
+  category: waTemplateCategoryEnum.optional(),
+  body: z.string().min(1).max(1024).optional(),
+  status: waTemplateStatusEnum.optional(),
+});
+
+// Segment filter for a broadcast. Must have at least one populated key — an
+// empty filter would target every contact in the org, which is unsafe v1.
+export const segmentFilterSchema = z
+  .object({
+    lead_status: z.array(leadStatusEnum).min(1).optional(),
+    tags: z.array(z.string().max(50)).min(1).optional(),
+    created_from: z.string().datetime().optional(),
+    created_to: z.string().datetime().optional(),
+  })
+  .refine(
+    (data) =>
+      Boolean(
+        data.lead_status?.length ||
+        data.tags?.length ||
+        data.created_from ||
+        data.created_to,
+      ),
+    { message: "At least one segment filter is required" },
+  );
+
+export const createWhatsappCampaignSchema = z.object({
+  template_id: z.string().uuid(),
+  name: z.string().trim().min(1).max(255),
+  segment_filter: segmentFilterSchema,
+  // Same variable values for every recipient in v1. Keys are "1", "2", ...
+  // matching the template's {{N}} placeholders.
+  template_variables: z.record(z.string().min(1).max(1024)).optional(),
+  scheduled_at: z.string().datetime().optional(),
+});
+
+export const waCampaignStatusEnum = z.enum([
+  "draft",
+  "scheduled",
+  "running",
+  "completed",
+  "cancelled",
+  "failed",
+]);
+
+export const listWhatsappCampaignsSchema = z.object({
+  status: waCampaignStatusEnum.optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+// ============================================
 // COMMON SCHEMAS
 // ============================================
 
@@ -549,5 +651,12 @@ export const schemas = {
     createAlert: createAlertSchema,
   },
   leads: { create: createLeadSchema, update: updateLeadSchema },
+  whatsapp: {
+    createTemplate: createWhatsappTemplateSchema,
+    updateTemplate: updateWhatsappTemplateSchema,
+    createCampaign: createWhatsappCampaignSchema,
+    listCampaigns: listWhatsappCampaignsSchema,
+    segment: segmentFilterSchema,
+  },
   common: { pagination: paginationSchema, id: idParamSchema },
 } as const;
