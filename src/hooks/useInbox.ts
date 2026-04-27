@@ -43,6 +43,7 @@ export function useInbox(): {
     isLoading,
     setConversations,
     appendMessage,
+    patchMessage,
     setMessages,
     selectConversation,
     setFilters,
@@ -115,16 +116,34 @@ export function useInbox(): {
     [appendMessage],
   );
 
-  // Subscribe to INSERT on messages for the open conversation thread.
+  // Subscribe to INSERT + UPDATE on messages for the open conversation thread.
+  // UPDATE carries delivery-status receipts (sent → delivered → read → failed)
+  // delivered by the WhatsApp webhook. Diff-only: skip the patch if the
+  // status fields didn't actually change to avoid unrelated re-renders.
   const { status: realtimeStatus } = useRealtime<InboxMessage>({
     table: "messages",
-    event: "INSERT",
+    event: "*",
     filter: selectedConversationId
       ? `conversation_id=eq.${selectedConversationId}`
       : undefined,
     enabled: Boolean(selectedConversationId),
     onInsert: (payload) => {
       appendMessage(payload.new);
+    },
+    onUpdate: (payload) => {
+      const next = payload.new;
+      const prev = payload.old;
+      if (!next?.id) return;
+      const changed =
+        next.delivery_status !== prev?.delivery_status ||
+        next.delivered_at !== prev?.delivered_at ||
+        next.read_at !== prev?.read_at;
+      if (!changed) return;
+      patchMessage(next.id, {
+        delivery_status: next.delivery_status,
+        delivered_at: next.delivered_at,
+        read_at: next.read_at,
+      });
     },
   });
 

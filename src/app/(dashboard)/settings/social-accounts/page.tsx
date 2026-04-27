@@ -43,6 +43,10 @@ export default function SocialAccountsPage() {
   };
 
   const handleConnect = (platform: string) => {
+    if (platform === "whatsapp") {
+      window.location.href = "/settings/whatsapp/setup";
+      return;
+    }
     window.location.href = `/api/connectors/${platform}/auth`;
   };
 

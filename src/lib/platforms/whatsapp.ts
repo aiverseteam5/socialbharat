@@ -8,7 +8,9 @@ import {
 
 /**
  * WhatsApp Cloud API connector
- * Supports sending messages, templates, broadcasts, and parsing webhooks
+ * Supports sending messages, templates, and parsing webhooks. Broadcast
+ * fan-out is built per-recipient in src/lib/queue/broadcast-worker.ts —
+ * Meta's API has no native multi-recipient endpoint.
  */
 export class WhatsAppConnector extends BasePlatformConnector {
   private phoneNumberId: string;
@@ -117,55 +119,6 @@ export class WhatsAppConnector extends BasePlatformConnector {
   }
 
   /**
-   * Send a broadcast message to multiple recipients
-   * @param recipients - Array of phone numbers
-   * @param templateName - Template name
-   * @param language - Language code
-   * @returns Broadcast ID
-   */
-  async sendBroadcast(
-    recipients: string[],
-    templateName: string,
-    language: string,
-  ): Promise<string> {
-    try {
-      const url = `https://graph.facebook.com/v19.0/${this.phoneNumberId}/message_broadcasts`;
-
-      const body = {
-        messaging_product: "whatsapp",
-        to: recipients,
-        template: {
-          name: templateName,
-          language: {
-            code: language,
-          },
-        },
-      };
-
-      const response = await fetch(url, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${this.accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      });
-
-      const data = await response.json();
-
-      if (data.error) {
-        throw new Error(data.error.message);
-      }
-
-      return data.id;
-    } catch (error) {
-      throw new Error(
-        error instanceof Error ? error.message : "Failed to send broadcast",
-      );
-    }
-  }
-
-  /**
    * Parse incoming webhook payload
    * @param payload - Raw webhook payload from WhatsApp
    * @returns Parsed message data
@@ -192,7 +145,7 @@ export class WhatsAppConnector extends BasePlatformConnector {
   // WhatsApp doesn't support post publishing like other platforms
   async publishPost(): Promise<never> {
     throw new Error(
-      "WhatsApp does not support post publishing. Use sendMessage, sendTemplate, or sendBroadcast.",
+      "WhatsApp does not support post publishing. Use sendMessage or sendTemplate.",
     );
   }
 

@@ -27,6 +27,7 @@ import type {
   ConversationStatus,
 } from "@/stores/inbox-store";
 import type { RealtimeStatus } from "@/hooks/useRealtime";
+import { formatRelativeTime } from "@/lib/format-relative-time";
 
 const platformIcon: Record<InboxPlatform, typeof Facebook> = {
   facebook: Facebook,
@@ -55,6 +56,25 @@ function formatTimeAgo(iso: string | null): string {
   return `${days}d`;
 }
 
+function truncate(text: string, max: number): string {
+  if (text.length <= max) return text;
+  return text.slice(0, max - 1).trimEnd() + "…";
+}
+
+function countUnread(c: ConversationSummary): number {
+  if (!Array.isArray(c.latest_message) || c.latest_message.length === 0) {
+    return 0;
+  }
+  const lastAgent = [...c.latest_message]
+    .filter((m) => m.sender_type === "agent")
+    .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))[0];
+  return c.latest_message.filter(
+    (m) =>
+      m.sender_type === "contact" &&
+      (!lastAgent || m.created_at > lastAgent.created_at),
+  ).length;
+}
+
 interface Props {
   conversations: ConversationSummary[];
   selectedId: string | null;
@@ -63,6 +83,13 @@ interface Props {
   realtimeStatus: RealtimeStatus;
   onSelect: (id: string) => void;
   onFilterChange: (filters: InboxFilters) => void;
+  /**
+   * "default" — multi-platform inbox (FB/IG/Twitter/LinkedIn/WhatsApp filter shown).
+   * "whatsapp" — WhatsApp-only chat. Hides platform filter, switches to client-side
+   * search across name + phone, truncates previews to 40 chars, uses
+   * `formatRelativeTime`, shows numeric unread badge (cap "9+").
+   */
+  mode?: "default" | "whatsapp";
 }
 
 export function ConversationList({
@@ -73,8 +100,26 @@ export function ConversationList({
   realtimeStatus,
   onSelect,
   onFilterChange,
+  mode = "default",
 }: Props) {
   const sc = statusConfig[realtimeStatus];
+  const isWhatsApp = mode === "whatsapp";
+
+  // WhatsApp mode does the search client-side over name OR phone so a user
+  // can find a contact by typing the last 4 digits of their number.
+  const visibleConversations = isWhatsApp
+    ? conversations.filter((c) => {
+        const needle = (filters.search ?? "").trim().toLowerCase();
+        if (!needle) return true;
+        const name = c.contact?.display_name?.toLowerCase() ?? "";
+        const phone = c.contact?.platform_user_id?.toLowerCase() ?? "";
+        return name.includes(needle) || phone.includes(needle);
+      })
+    : conversations;
+
+  const emptyState = isWhatsApp
+    ? "No conversations yet. Share your WhatsApp link to get started."
+    : "No conversations yet. Incoming messages will appear here.";
 
   return (
     <div className="flex h-full flex-col border-r">
@@ -82,7 +127,9 @@ export function ConversationList({
         <div className="flex items-center gap-2">
           <Input
             className="flex-1"
-            placeholder="Search contacts..."
+            placeholder={
+              isWhatsApp ? "Search by name or phone…" : "Search contacts..."
+            }
             value={filters.search ?? ""}
             onChange={(e) =>
               onFilterChange({
@@ -100,27 +147,29 @@ export function ConversationList({
           </div>
         </div>
         <div className="flex gap-2">
-          <Select
-            value={filters.platform ?? "all"}
-            onValueChange={(v) =>
-              onFilterChange({
-                ...filters,
-                platform: v === "all" ? undefined : (v as InboxPlatform),
-              })
-            }
-          >
-            <SelectTrigger className="h-8 text-xs">
-              <SelectValue placeholder="Platform" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All platforms</SelectItem>
-              <SelectItem value="facebook">Facebook</SelectItem>
-              <SelectItem value="instagram">Instagram</SelectItem>
-              <SelectItem value="twitter">Twitter</SelectItem>
-              <SelectItem value="linkedin">LinkedIn</SelectItem>
-              <SelectItem value="whatsapp">WhatsApp</SelectItem>
-            </SelectContent>
-          </Select>
+          {!isWhatsApp && (
+            <Select
+              value={filters.platform ?? "all"}
+              onValueChange={(v) =>
+                onFilterChange({
+                  ...filters,
+                  platform: v === "all" ? undefined : (v as InboxPlatform),
+                })
+              }
+            >
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue placeholder="Platform" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All platforms</SelectItem>
+                <SelectItem value="facebook">Facebook</SelectItem>
+                <SelectItem value="instagram">Instagram</SelectItem>
+                <SelectItem value="twitter">Twitter</SelectItem>
+                <SelectItem value="linkedin">LinkedIn</SelectItem>
+                <SelectItem value="whatsapp">WhatsApp</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
           <Select
             value={filters.status ?? "all"}
             onValueChange={(v) =>
@@ -145,26 +194,36 @@ export function ConversationList({
       </div>
 
       <ScrollArea className="flex-1">
-        {isLoading && conversations.length === 0 ? (
+        {isLoading && visibleConversations.length === 0 ? (
           <div className="space-y-2 p-3">
             {[1, 2, 3].map((i) => (
               <Skeleton key={i} className="h-16 w-full" />
             ))}
           </div>
-        ) : conversations.length === 0 ? (
+        ) : visibleConversations.length === 0 ? (
           <Card className="m-3 p-6 text-center text-sm text-muted-foreground">
-            No conversations yet. Incoming messages will appear here.
+            {emptyState}
           </Card>
         ) : (
           <ul className="divide-y">
-            {conversations.map((c) => {
+            {visibleConversations.map((c) => {
               const Icon = platformIcon[c.platform];
               const preview = Array.isArray(c.latest_message)
                 ? c.latest_message[0]
                 : undefined;
               const isSelected = c.id === selectedId;
-              const hasUnread =
-                preview && !preview.sender_type.includes("agent");
+              const previewText = preview?.content ?? "No messages yet";
+              const displayPreview = isWhatsApp
+                ? truncate(previewText, 40)
+                : previewText;
+              const timeLabel = isWhatsApp
+                ? formatRelativeTime(c.last_message_at)
+                : formatTimeAgo(c.last_message_at);
+              const unreadCount = isWhatsApp ? countUnread(c) : 0;
+              const hasUnreadDot =
+                !isWhatsApp &&
+                preview &&
+                !preview.sender_type.includes("agent");
               return (
                 <li key={c.id}>
                   <button
@@ -183,15 +242,19 @@ export function ConversationList({
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="truncate font-medium">
-                          {c.contact?.display_name ?? "Unknown contact"}
+                          {c.contact?.display_name ??
+                            c.contact?.platform_user_id ??
+                            "Unknown contact"}
                         </span>
-                        <Icon className="h-3 w-3 shrink-0 text-muted-foreground" />
+                        {!isWhatsApp && (
+                          <Icon className="h-3 w-3 shrink-0 text-muted-foreground" />
+                        )}
                         <span className="ml-auto text-xs text-muted-foreground">
-                          {formatTimeAgo(c.last_message_at)}
+                          {timeLabel}
                         </span>
                       </div>
                       <p className="mt-1 truncate text-xs text-muted-foreground">
-                        {preview?.content ?? "No messages yet"}
+                        {displayPreview}
                       </p>
                       <div className="mt-1 flex items-center gap-2">
                         {c.status !== "open" && (
@@ -199,8 +262,13 @@ export function ConversationList({
                             {c.status}
                           </Badge>
                         )}
-                        {hasUnread && (
+                        {hasUnreadDot && (
                           <span className="h-2 w-2 rounded-full bg-primary" />
+                        )}
+                        {isWhatsApp && unreadCount > 0 && (
+                          <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-500 px-1.5 text-[10px] font-semibold text-white">
+                            {unreadCount > 9 ? "9+" : unreadCount}
+                          </span>
                         )}
                       </div>
                     </div>

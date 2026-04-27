@@ -76,6 +76,28 @@ export async function processIncomingMessage(
     throw contactErr || new Error("Contact upsert returned no row");
   }
 
+  // 1b. WhatsApp STOP-keyword opt-out (DPDP + Meta policy). Marks the contact
+  //     so future broadcast campaigns exclude them. We still record the message
+  //     and stay silent — sending a STOP-confirmation reply risks a consent
+  //     loop and is deferred. The .is(opted_out_at, null) filter makes a
+  //     repeat STOP a no-op (timestamp is set once).
+  if (incoming.platform === "whatsapp") {
+    const STOP_RX = /^\s*(stop|unsubscribe|remove|cancel)\s*$/i;
+    if (STOP_RX.test(incoming.message.content)) {
+      const { error: optErr } = await supabase
+        .from("contacts")
+        .update({ opted_out_at: new Date().toISOString() })
+        .eq("id", contact.id)
+        .is("opted_out_at", null);
+      if (optErr) {
+        logger.warn("opt-out update failed", {
+          error: optErr,
+          contactId: contact.id,
+        });
+      }
+    }
+  }
+
   // 2. Find or create conversation
   const { data: existingConv } = await supabase
     .from("conversations")
@@ -151,7 +173,25 @@ export async function processIncomingMessage(
     throw msgErr || new Error("Message insert returned no row");
   }
 
-  // 5. Bump last_message_at on the conversation
+  // 5. Lead seed: first inbound from this contact creates a 'New' lead.
+  // Idempotent — repeats are no-ops via UNIQUE (org_id, contact_id) +
+  // ignoreDuplicates. A 'Hot' lead messaging again must not regress to 'New'.
+  // Best-effort: webhook must not 500 if CRM seeding fails.
+  const { error: leadErr } = await supabase
+    .from("leads")
+    .upsert(
+      { org_id: incoming.orgId, contact_id: contact.id, status: "New" },
+      { onConflict: "org_id,contact_id", ignoreDuplicates: true },
+    );
+  if (leadErr) {
+    logger.warn("lead auto-create failed", {
+      error: leadErr,
+      orgId: incoming.orgId,
+      contactId: contact.id,
+    });
+  }
+
+  // 6. Bump last_message_at on the conversation
   await supabase
     .from("conversations")
     .update({
@@ -184,6 +224,66 @@ export async function processIncomingMessage(
     contactId: contact.id,
     deduplicated: false,
   };
+}
+
+export type DeliveryStatus = "sent" | "delivered" | "read" | "failed";
+
+export interface NormalizedStatusUpdate {
+  platformMessageId: string;
+  status: DeliveryStatus;
+  timestamp: Date;
+}
+
+/**
+ * Apply a WhatsApp Cloud API status receipt (sent/delivered/read/failed) to
+ * the matching outbound message. Calls the Postgres `apply_message_status`
+ * function which does atomic, rank-based comparison: never downgrades, sets
+ * timestamps once, and `failed` always wins. Idempotent on Meta retries.
+ */
+export async function applyMessageStatusUpdate(
+  update: NormalizedStatusUpdate,
+): Promise<void> {
+  const supabase = createServiceClient();
+  const { error } = await supabase.rpc("apply_message_status", {
+    p_platform_message_id: update.platformMessageId,
+    p_status: update.status,
+    p_ts: update.timestamp.toISOString(),
+  });
+
+  if (error) {
+    logger.error("apply_message_status RPC failed", error, {
+      platformMessageId: update.platformMessageId,
+      status: update.status,
+    });
+    throw error;
+  }
+
+  // Mirror the status onto the broadcast recipients table when this
+  // wamid was produced by a campaign send. The filter on `status IN
+  // (lower-ranked)` makes the update race-safe and idempotent: retries
+  // and out-of-order webhooks can never downgrade a row, and `skipped`
+  // (operator cancel) is preserved because it's not in any allowed-from
+  // set. No error if the wamid doesn't belong to any campaign.
+  const allowedFrom: Record<DeliveryStatus, string[]> = {
+    sent: ["pending"],
+    delivered: ["pending", "sent"],
+    read: ["pending", "sent", "delivered"],
+    failed: ["pending", "sent", "delivered", "read"],
+  };
+
+  const { error: recipErr } = await supabase
+    .from("whatsapp_broadcast_recipients")
+    .update({ status: update.status })
+    .eq("platform_message_id", update.platformMessageId)
+    .in("status", allowedFrom[update.status]);
+
+  if (recipErr) {
+    logger.warn("broadcast recipient status update failed", {
+      platformMessageId: update.platformMessageId,
+      status: update.status,
+      error: recipErr,
+    });
+  }
 }
 
 /**
