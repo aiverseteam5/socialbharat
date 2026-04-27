@@ -446,6 +446,30 @@ export const updateNotificationPreferencesSchema = z.object({
 });
 
 // ============================================
+// LEAD SCHEMAS
+// ============================================
+
+export const leadStatusEnum = z.enum([
+  "New",
+  "Interested",
+  "Hot",
+  "Paid",
+  "Lost",
+]);
+
+export const createLeadSchema = z.object({
+  contact_id: z.string().uuid(),
+  name: z.string().trim().min(1).max(120).optional(),
+  status: leadStatusEnum.optional(),
+});
+
+export const updateLeadSchema = z.object({
+  name: z.string().trim().max(120).nullable().optional(),
+  status: leadStatusEnum.optional(),
+  notes: z.string().max(5000).nullable().optional(),
+});
+
+// ============================================
 // COMMON SCHEMAS
 // ============================================
 
@@ -524,5 +548,6 @@ export const schemas = {
     createQuery: createListeningQuerySchema,
     createAlert: createAlertSchema,
   },
+  leads: { create: createLeadSchema, update: updateLeadSchema },
   common: { pagination: paginationSchema, id: idParamSchema },
 } as const;

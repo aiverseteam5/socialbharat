@@ -151,7 +151,25 @@ export async function processIncomingMessage(
     throw msgErr || new Error("Message insert returned no row");
   }
 
-  // 5. Bump last_message_at on the conversation
+  // 5. Lead seed: first inbound from this contact creates a 'New' lead.
+  // Idempotent — repeats are no-ops via UNIQUE (org_id, contact_id) +
+  // ignoreDuplicates. A 'Hot' lead messaging again must not regress to 'New'.
+  // Best-effort: webhook must not 500 if CRM seeding fails.
+  const { error: leadErr } = await supabase
+    .from("leads")
+    .upsert(
+      { org_id: incoming.orgId, contact_id: contact.id, status: "New" },
+      { onConflict: "org_id,contact_id", ignoreDuplicates: true },
+    );
+  if (leadErr) {
+    logger.warn("lead auto-create failed", {
+      error: leadErr,
+      orgId: incoming.orgId,
+      contactId: contact.id,
+    });
+  }
+
+  // 6. Bump last_message_at on the conversation
   await supabase
     .from("conversations")
     .update({
@@ -184,6 +202,39 @@ export async function processIncomingMessage(
     contactId: contact.id,
     deduplicated: false,
   };
+}
+
+export type DeliveryStatus = "sent" | "delivered" | "read" | "failed";
+
+export interface NormalizedStatusUpdate {
+  platformMessageId: string;
+  status: DeliveryStatus;
+  timestamp: Date;
+}
+
+/**
+ * Apply a WhatsApp Cloud API status receipt (sent/delivered/read/failed) to
+ * the matching outbound message. Calls the Postgres `apply_message_status`
+ * function which does atomic, rank-based comparison: never downgrades, sets
+ * timestamps once, and `failed` always wins. Idempotent on Meta retries.
+ */
+export async function applyMessageStatusUpdate(
+  update: NormalizedStatusUpdate,
+): Promise<void> {
+  const supabase = createServiceClient();
+  const { error } = await supabase.rpc("apply_message_status", {
+    p_platform_message_id: update.platformMessageId,
+    p_status: update.status,
+    p_ts: update.timestamp.toISOString(),
+  });
+
+  if (error) {
+    logger.error("apply_message_status RPC failed", error, {
+      platformMessageId: update.platformMessageId,
+      status: update.status,
+    });
+    throw error;
+  }
 }
 
 /**

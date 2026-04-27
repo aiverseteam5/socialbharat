@@ -3,8 +3,11 @@ import { verifyMetaSignature } from "@/lib/webhooks/verify";
 import {
   processIncomingMessage,
   resolveProfileByPlatformId,
+  applyMessageStatusUpdate,
   type InboxPlatform,
   type NormalizedIncomingMessage,
+  type NormalizedStatusUpdate,
+  type DeliveryStatus,
 } from "@/lib/inbox/message-processor";
 import { logger } from "@/lib/logger";
 
@@ -88,6 +91,15 @@ export async function POST(request: NextRequest) {
           message: n.message,
         };
         await processIncomingMessage(incoming);
+        results.push({ ok: true });
+      }
+
+      // WhatsApp also delivers status receipts (sent/delivered/read/failed)
+      // alongside or independently of incoming messages. Apply via the
+      // race-safe RPC; idempotent on Meta retries.
+      const statuses = normalizeMetaStatusUpdates(body.object, rawEntry);
+      for (const s of statuses) {
+        await applyMessageStatusUpdate(s);
         results.push({ ok: true });
       }
     } catch (err) {
@@ -249,6 +261,50 @@ function normalizeInstagram(
           timestamp: new Date(),
           metadata: { media_id: mediaId },
         },
+      });
+    }
+  }
+
+  return out;
+}
+
+function normalizeMetaStatusUpdates(
+  object: string | undefined,
+  rawEntry: unknown,
+): NormalizedStatusUpdate[] {
+  if (object !== "whatsapp_business_account") return [];
+  const entry = rawEntry as Record<string, unknown>;
+  const out: NormalizedStatusUpdate[] = [];
+  const changes = entry.changes as Array<Record<string, unknown>> | undefined;
+  if (!changes) return out;
+
+  for (const c of changes) {
+    if (c.field !== "messages") continue;
+    const value = c.value as Record<string, unknown> | undefined;
+    if (!value) continue;
+
+    const statuses = value.statuses as
+      | Array<{ id?: string; status?: string; timestamp?: string }>
+      | undefined;
+    if (!statuses) continue;
+
+    for (const s of statuses) {
+      if (!s.id || !s.status) continue;
+      const status = s.status as DeliveryStatus;
+      if (
+        status !== "sent" &&
+        status !== "delivered" &&
+        status !== "read" &&
+        status !== "failed"
+      ) {
+        continue;
+      }
+      out.push({
+        platformMessageId: s.id,
+        status,
+        timestamp: new Date(
+          s.timestamp ? parseInt(s.timestamp, 10) * 1000 : Date.now(),
+        ),
       });
     }
   }
