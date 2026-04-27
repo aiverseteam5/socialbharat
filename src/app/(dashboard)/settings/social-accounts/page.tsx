@@ -182,7 +182,7 @@ export default function SocialAccountsPage() {
           token.
         </p>
         <Button asChild size="sm" variant="outline">
-          <Link href="/whatsapp">Setup WhatsApp</Link>
+          <Link href="/settings/whatsapp/setup">Setup WhatsApp</Link>
         </Button>
       </Card>
     </div>
