@@ -9,6 +9,7 @@ import { Worker, type Job } from "bullmq";
 import { getRedisConnection } from "../connection";
 import { QUEUE_NAMES, type AgentJobData } from "../queues";
 import { runWeeklyCycle, runInboxCycle } from "@/lib/agents/orchestrator";
+import { runAutoReply } from "@/lib/agents/auto-reply-runner";
 import { logger } from "@/lib/logger";
 
 export async function handleAgentJob(job: Job<AgentJobData>): Promise<void> {
@@ -30,6 +31,25 @@ export async function handleAgentJob(job: Job<AgentJobData>): Promise<void> {
   if (kind === "inbox_replies") {
     const result = await runInboxCycle(orgId);
     logger.info("agent-worker: inbox_replies complete", { ...result });
+    return;
+  }
+  if (kind === "auto_reply") {
+    const { conversationId, triggeringMessageId } = job.data;
+    if (!conversationId || !triggeringMessageId) {
+      throw new Error(
+        "auto_reply job missing conversationId or triggeringMessageId",
+      );
+    }
+    const result = await runAutoReply({
+      orgId,
+      conversationId,
+      triggeringMessageId,
+    });
+    logger.info("agent-worker: auto_reply complete", {
+      orgId,
+      conversationId,
+      outcome: result.outcome,
+    });
     return;
   }
   throw new Error(`agent-worker: unknown kind ${String(kind)}`);

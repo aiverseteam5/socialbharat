@@ -584,6 +584,13 @@ export const idParamSchema = z.object({
   id: z.string().uuid("Invalid ID format"),
 });
 
+// Per-org grounding text for the WhatsApp inbound auto-reply agent.
+// Free-text, hard-capped to keep the system prompt under Anthropic's
+// limits; v1 uses a single body — multi-document retrieval is deferred.
+export const updateOrgKnowledgeSchema = z.object({
+  body: z.string().max(8000),
+});
+
 // ============================================
 // WEBHOOK SCHEMAS
 // ============================================
@@ -658,5 +665,6 @@ export const schemas = {
     listCampaigns: listWhatsappCampaignsSchema,
     segment: segmentFilterSchema,
   },
+  agent: { updateKnowledge: updateOrgKnowledgeSchema },
   common: { pagination: paginationSchema, id: idParamSchema },
 } as const;

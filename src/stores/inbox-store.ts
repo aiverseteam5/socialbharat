@@ -31,6 +31,7 @@ export interface ConversationSummary {
   language_detected: string | null;
   last_message_at: string | null;
   created_at: string;
+  auto_reply_paused_at: string | null;
   contact: ContactSummary | null;
   latest_message?: Array<{
     id: string;

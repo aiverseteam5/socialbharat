@@ -87,6 +87,20 @@ export default function InboxConversationPage() {
     logger.info("Assign dialog not implemented in Phase 3 MVP");
   };
 
+  const handleAutoReplyToggle = async (paused: boolean) => {
+    if (!selectedConversationId) return;
+    try {
+      const res = await fetch(
+        `/api/inbox/conversations/${selectedConversationId}/auto-reply`,
+        { method: paused ? "POST" : "DELETE" },
+      );
+      if (!res.ok) throw new Error("Auto-reply toggle failed");
+      await refresh();
+    } catch (err) {
+      logger.error("Auto-reply toggle failed", err);
+    }
+  };
+
   return (
     <div className="-m-6 flex h-[calc(100vh-4rem)] overflow-hidden">
       <div className="w-80 shrink-0">
@@ -115,6 +129,7 @@ export default function InboxConversationPage() {
                 }}
                 onStatusChange={handleStatusChange}
                 onAssignClick={handleAssignClick}
+                onAutoReplyToggle={handleAutoReplyToggle}
               />
             </div>
             <SmartReply

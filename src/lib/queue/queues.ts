@@ -59,11 +59,18 @@ export interface AgentJobData {
    * Which agent pipeline to run for this org.
    * - weekly_content: research → content, writes to agent_plans
    * - inbox_replies:  batch classify + draft, writes to agent_inbox_actions
+   * - auto_reply:     real-time WhatsApp inbound auto-reply (one job per
+   *                   triggering inbound message). Sends via sendMessage()
+   *                   when confident; falls back to a draft on escape.
    */
-  kind: "weekly_content" | "inbox_replies";
+  kind: "weekly_content" | "inbox_replies" | "auto_reply";
   orgId: string;
   /** Optional — when set, propagated into logs so cron runs are traceable. */
-  triggeredBy?: "cron" | "manual";
+  triggeredBy?: "cron" | "manual" | "webhook";
+  /** Required for kind="auto_reply". */
+  conversationId?: string;
+  /** Required for kind="auto_reply" — the inbound message that triggered the reply. */
+  triggeringMessageId?: string;
 }
 
 export interface BroadcastJobData {

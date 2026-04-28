@@ -1,6 +1,13 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Link2, CreditCard, ShieldCheck, Sparkles } from "lucide-react";
+import {
+  Users,
+  Link2,
+  CreditCard,
+  ShieldCheck,
+  Sparkles,
+  BookOpen,
+} from "lucide-react";
 import { t, getLocale } from "@/lib/i18n";
 
 const sections = [
@@ -21,6 +28,12 @@ const sections = [
     icon: Sparkles,
     titleKey: "settings.brand_voice_title",
     subtitleKey: "settings.brand_voice_subtitle",
+  },
+  {
+    href: "/settings/agent-knowledge",
+    icon: BookOpen,
+    titleKey: "settings.agent_knowledge_title",
+    subtitleKey: "settings.agent_knowledge_subtitle",
   },
   {
     href: "/settings/billing",

@@ -283,6 +283,8 @@
     "social_accounts_subtitle": "Connect your social media profiles to start managing them.",
     "brand_voice_title": "Brand Voice",
     "brand_voice_subtitle": "Train SocialBharat's AI to write in your brand's voice.",
+    "agent_knowledge_title": "Auto-reply Knowledge",
+    "agent_knowledge_subtitle": "Ground the WhatsApp auto-reply AI with facts about your business.",
     "connect": "Connect",
     "disconnect": "Disconnect",
     "connected": "Connected",

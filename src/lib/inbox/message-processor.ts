@@ -1,5 +1,6 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { sendNotificationVoid } from "@/lib/notifications/send";
+import { maybeEnqueueAutoReply } from "@/lib/agents/auto-reply-gate";
 import { logger } from "@/lib/logger";
 
 export type InboxPlatform =
@@ -216,6 +217,28 @@ export async function processIncomingMessage(
       body: incoming.message.content.substring(0, 100),
       link: `/inbox`,
     });
+  }
+
+  // Auto-reply gate (WhatsApp inbound only). Best-effort — never blocks the
+  // webhook. The gate evaluates org/conv/lead/contact/rate state and enqueues
+  // an `auto_reply` agent job if every check passes.
+  if (incoming.platform === "whatsapp") {
+    try {
+      const gate = await maybeEnqueueAutoReply(supabase, {
+        orgId: incoming.orgId,
+        conversationId,
+        contactId: contact.id,
+        triggeringMessageId: msg.id,
+      });
+      if (!gate.enqueued && gate.reason) {
+        logger.info("auto-reply gate skipped", {
+          reason: gate.reason,
+          conversationId,
+        });
+      }
+    } catch (err) {
+      logger.warn("auto-reply gate failed", { error: err, conversationId });
+    }
   }
 
   return {

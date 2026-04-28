@@ -28,6 +28,7 @@ import {
   MoreHorizontal,
   Paperclip,
   Send,
+  Sparkles,
   UserPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -46,6 +47,7 @@ interface Props {
   onSend: (text: string) => Promise<void>;
   onStatusChange: (status: "closed" | "snoozed" | "open") => Promise<void>;
   onAssignClick: () => void;
+  onAutoReplyToggle?: (paused: boolean) => Promise<void>;
   /**
    * "cmd-enter" (default) — Cmd/Ctrl+Enter sends, Enter newline. Used by /inbox.
    * "enter" — Enter sends, Shift+Enter newline. WhatsApp convention.
@@ -96,6 +98,7 @@ export function MessageThread({
   onSend,
   onStatusChange,
   onAssignClick,
+  onAutoReplyToggle,
   sendKey = "cmd-enter",
   isLoadingMessages = false,
   loadError = false,
@@ -135,6 +138,8 @@ export function MessageThread({
         ? "border-amber-300 text-amber-700 bg-amber-50"
         : "border-slate-200 text-slate-500 bg-slate-50";
 
+  const autoReplyPaused = Boolean(conversation.auto_reply_paused_at);
+
   return (
     <div className="flex h-full flex-col">
       {/* Thread header */}
@@ -159,6 +164,14 @@ export function MessageThread({
         >
           {conversation.status}
         </Badge>
+        {autoReplyPaused && (
+          <Badge
+            variant="outline"
+            className="text-xs font-medium border-slate-300 text-slate-600 bg-slate-50"
+          >
+            Auto-reply paused
+          </Badge>
+        )}
         <Button
           size="sm"
           variant="outline"
@@ -190,6 +203,13 @@ export function MessageThread({
             <DropdownMenuItem onClick={() => onStatusChange("open")}>
               Reopen
             </DropdownMenuItem>
+            {onAutoReplyToggle && (
+              <DropdownMenuItem
+                onClick={() => onAutoReplyToggle(!autoReplyPaused)}
+              >
+                {autoReplyPaused ? "Resume auto-reply" : "Pause auto-reply"}
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </header>
@@ -236,6 +256,11 @@ export function MessageThread({
           <ul className="space-y-4">
             {messages.map((m) => {
               const isAgent = m.sender_type === "agent";
+              const isAutoReply =
+                isAgent &&
+                m.metadata !== null &&
+                typeof m.metadata === "object" &&
+                "auto_reply" in m.metadata;
               return (
                 <li
                   key={m.id}
@@ -275,6 +300,19 @@ export function MessageThread({
                           : "text-slate-400",
                       )}
                     >
+                      {isAutoReply && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="inline-flex items-center gap-0.5 rounded-sm bg-white/15 px-1 py-px text-[9px] font-semibold uppercase tracking-wide text-white/90">
+                                <Sparkles className="h-2.5 w-2.5" />
+                                AI
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>Sent by auto-reply</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
                       <span>
                         {new Date(m.created_at).toLocaleTimeString([], {
                           hour: "2-digit",

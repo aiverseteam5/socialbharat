@@ -41,6 +41,7 @@ export async function GET(request: NextRequest) {
         `
         id, platform, type, status, assigned_to, tags,
         sentiment_score, language_detected, last_message_at, created_at,
+        auto_reply_paused_at,
         contact:contacts!contact_id (id, display_name, avatar_url, platform_user_id),
         latest_message:messages!conversation_id (id, content, sender_type, created_at)
         `,

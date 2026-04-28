@@ -79,6 +79,20 @@ export default function WhatsAppPage() {
     }
   };
 
+  const handleAutoReplyToggle = async (paused: boolean) => {
+    if (!selectedConversationId) return;
+    try {
+      const res = await fetch(
+        `/api/inbox/conversations/${selectedConversationId}/auto-reply`,
+        { method: paused ? "POST" : "DELETE" },
+      );
+      if (!res.ok) throw new Error("Auto-reply toggle failed");
+      await refresh();
+    } catch (err) {
+      logger.error("WhatsApp auto-reply toggle failed", err);
+    }
+  };
+
   const handleSendTemplate = async () => {
     if (!selected) return;
     const t = STUB_TEMPLATES.find((x) => x.name === selectedTemplate);
@@ -171,6 +185,7 @@ export default function WhatsAppPage() {
                 }}
                 onStatusChange={handleStatusChange}
                 onAssignClick={() => {}}
+                onAutoReplyToggle={handleAutoReplyToggle}
                 sendKey="enter"
               />
             </div>

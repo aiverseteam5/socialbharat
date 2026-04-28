@@ -122,6 +122,16 @@ vi.mock("@/lib/supabase/service", () => ({
   })),
 }));
 
+const maybeEnqueueAutoReplyMock = vi.fn<
+  unknown[],
+  Promise<{ enqueued: boolean }>
+>();
+maybeEnqueueAutoReplyMock.mockResolvedValue({ enqueued: false });
+vi.mock("@/lib/agents/auto-reply-gate", () => ({
+  maybeEnqueueAutoReply: (...args: unknown[]) =>
+    maybeEnqueueAutoReplyMock(...args),
+}));
+
 import {
   processIncomingMessage,
   applyMessageStatusUpdate,
@@ -147,6 +157,7 @@ const baseIncoming = {
 describe("processIncomingMessage", () => {
   beforeEach(() => {
     for (const key of Object.keys(state)) delete state[key];
+    maybeEnqueueAutoReplyMock.mockClear();
   });
 
   it("upserts contact, creates conversation, inserts message", async () => {
@@ -351,6 +362,63 @@ describe("processIncomingMessage", () => {
       });
       // Opt-out is WhatsApp-scoped; FB STOP must not flip the flag.
       expect(table("contacts").updateCalls).toHaveLength(0);
+    });
+  });
+
+  describe("auto-reply gate", () => {
+    function seedHappyPath() {
+      table("contacts").upsertResult = {
+        data: { id: "contact-1" },
+        error: null,
+      };
+      table("conversations").selectMaybeSingle = { data: null, error: null };
+      table("conversations").insertResult = {
+        data: { id: "conv-1" },
+        error: null,
+      };
+      table("messages").selectMaybeSingle = { data: null, error: null };
+      table("messages").insertResult = { data: { id: "msg-1" }, error: null };
+    }
+
+    it("invokes the gate for WhatsApp inbound with the persisted ids", async () => {
+      seedHappyPath();
+      await processIncomingMessage({
+        ...baseIncoming,
+        platform: "whatsapp",
+        message: { ...baseIncoming.message, content: "Hi" },
+      });
+      expect(maybeEnqueueAutoReplyMock).toHaveBeenCalledOnce();
+      expect(maybeEnqueueAutoReplyMock).toHaveBeenCalledWith(
+        expect.anything(),
+        {
+          orgId: "org-1",
+          conversationId: "conv-1",
+          contactId: "contact-1",
+          triggeringMessageId: "msg-1",
+        },
+      );
+    });
+
+    it("does not invoke the gate for non-WhatsApp platforms", async () => {
+      seedHappyPath();
+      await processIncomingMessage({
+        ...baseIncoming,
+        platform: "facebook",
+        message: { ...baseIncoming.message, content: "Hi" },
+      });
+      expect(maybeEnqueueAutoReplyMock).not.toHaveBeenCalled();
+    });
+
+    it("does not let a thrown gate error break the webhook", async () => {
+      seedHappyPath();
+      maybeEnqueueAutoReplyMock.mockRejectedValueOnce(new Error("boom"));
+      await expect(
+        processIncomingMessage({
+          ...baseIncoming,
+          platform: "whatsapp",
+          message: { ...baseIncoming.message, content: "Hi" },
+        }),
+      ).resolves.toMatchObject({ deduplicated: false });
     });
   });
 });
