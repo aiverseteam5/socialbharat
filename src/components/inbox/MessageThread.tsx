@@ -1,20 +1,41 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Send, MoreHorizontal, Paperclip, UserPlus } from "lucide-react";
+import {
+  AlertCircle,
+  Check,
+  CheckCheck,
+  Loader2,
+  MoreHorizontal,
+  Paperclip,
+  Send,
+  UserPlus,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { ConversationSummary, InboxMessage } from "@/stores/inbox-store";
+import type {
+  ConversationSummary,
+  DeliveryStatus,
+  InboxMessage,
+} from "@/stores/inbox-store";
 import { logger } from "@/lib/logger";
 
 interface Props {
@@ -25,6 +46,46 @@ interface Props {
   onSend: (text: string) => Promise<void>;
   onStatusChange: (status: "closed" | "snoozed" | "open") => Promise<void>;
   onAssignClick: () => void;
+  /**
+   * "cmd-enter" (default) — Cmd/Ctrl+Enter sends, Enter newline. Used by /inbox.
+   * "enter" — Enter sends, Shift+Enter newline. WhatsApp convention.
+   */
+  sendKey?: "cmd-enter" | "enter";
+  isLoadingMessages?: boolean;
+  loadError?: boolean;
+  onRetry?: () => void;
+}
+
+function DeliveryIcon({ status }: { status?: DeliveryStatus }) {
+  if (!status || status === "sent") {
+    return <Check className="h-3 w-3 text-white/70" aria-label="Sent" />;
+  }
+  if (status === "delivered") {
+    return (
+      <CheckCheck className="h-3 w-3 text-white/70" aria-label="Delivered" />
+    );
+  }
+  if (status === "read") {
+    return <CheckCheck className="h-3 w-3 text-sky-200" aria-label="Read" />;
+  }
+  if (status === "failed") {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="inline-flex">
+              <AlertCircle
+                className="h-3 w-3 text-red-300"
+                aria-label="Send failed"
+              />
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>Send failed</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+  return null;
 }
 
 export function MessageThread({
@@ -35,6 +96,10 @@ export function MessageThread({
   onSend,
   onStatusChange,
   onAssignClick,
+  sendKey = "cmd-enter",
+  isLoadingMessages = false,
+  loadError = false,
+  onRetry,
 }: Props) {
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement | null>(null);
@@ -52,10 +117,16 @@ export function MessageThread({
       onDraftChange("");
     } catch (err) {
       logger.error("Send reply failed", err);
+      toast.error("Failed to send. Try again.");
     } finally {
       setSending(false);
     }
   };
+
+  const composerPlaceholder =
+    sendKey === "enter"
+      ? "Type a message..."
+      : "Type a reply… (⌘Enter to send)";
 
   const statusColor =
     conversation.status === "open"
@@ -129,7 +200,35 @@ export function MessageThread({
         aria-live="polite"
         aria-label="Messages"
       >
-        {messages.length === 0 ? (
+        {isLoadingMessages ? (
+          <ul className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <li
+                key={i}
+                className={cn(
+                  "flex items-end gap-2",
+                  i % 2 === 0 ? "justify-end" : "justify-start",
+                )}
+              >
+                <Skeleton className="h-12 w-48 rounded-xl" />
+              </li>
+            ))}
+          </ul>
+        ) : loadError ? (
+          <div className="mx-auto mt-10 max-w-sm rounded-lg border border-red-200 bg-white p-4 text-center text-sm">
+            <p className="font-medium text-slate-900">
+              Failed to load messages.
+            </p>
+            <Button
+              size="sm"
+              variant="outline"
+              className="mt-3"
+              onClick={() => onRetry?.()}
+            >
+              Retry
+            </Button>
+          </div>
+        ) : messages.length === 0 ? (
           <p className="mt-10 text-center text-sm text-slate-400">
             No messages yet.
           </p>
@@ -170,14 +269,19 @@ export function MessageThread({
                     </p>
                     <p
                       className={cn(
-                        "mt-1 text-[10px] tabular-nums",
-                        isAgent ? "text-white/60 text-right" : "text-slate-400",
+                        "mt-1 flex items-center gap-1 text-[10px] tabular-nums",
+                        isAgent
+                          ? "text-white/60 justify-end"
+                          : "text-slate-400",
                       )}
                     >
-                      {new Date(m.created_at).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      <span>
+                        {new Date(m.created_at).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                      {isAgent && <DeliveryIcon status={m.delivery_status} />}
                     </p>
                   </div>
                 </li>
@@ -192,12 +296,19 @@ export function MessageThread({
       <div className="border-t border-slate-200 bg-white p-3">
         <div className="flex items-end gap-2">
           <Textarea
-            placeholder="Type a reply… (⌘Enter to send)"
+            placeholder={composerPlaceholder}
             rows={2}
             value={replyDraft}
             onChange={(e) => onDraftChange(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+              if (e.key !== "Enter") return;
+              if (sendKey === "enter") {
+                if (e.shiftKey) return; // Shift+Enter → newline
+                e.preventDefault();
+                void handleSend();
+                return;
+              }
+              if (e.metaKey || e.ctrlKey) {
                 e.preventDefault();
                 void handleSend();
               }
@@ -223,7 +334,11 @@ export function MessageThread({
             aria-label="Send reply"
             className="shrink-0 bg-brand-600 hover:bg-brand-700 active:scale-[0.96] transition-transform"
           >
-            <Send className="h-4 w-4" />
+            {sending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
           </Button>
         </div>
       </div>

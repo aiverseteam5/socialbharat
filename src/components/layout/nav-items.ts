@@ -8,6 +8,8 @@ import {
   Sparkles,
   Settings,
   MessageCircle,
+  Megaphone,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 
@@ -21,6 +23,8 @@ export const SIDEBAR_NAV_ITEMS: NavItem[] = [
   { key: "nav.dashboard", href: "/dashboard", icon: LayoutDashboard },
   { key: "nav.publishing", href: "/publishing", icon: PenTool },
   { key: "nav.inbox", href: "/inbox", icon: Inbox },
+  { key: "nav.leads", href: "/leads", icon: Users },
+  { key: "nav.broadcasts", href: "/whatsapp/broadcasts", icon: Megaphone },
   { key: "nav.analytics", href: "/analytics", icon: BarChart3 },
   { key: "nav.listening", href: "/listening", icon: Radio },
   { key: "nav.media", href: "/media", icon: Image },

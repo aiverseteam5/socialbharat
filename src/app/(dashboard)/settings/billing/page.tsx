@@ -121,7 +121,7 @@ export default function BillingSettingsPage() {
       case "pro":
         return "bg-purple-100 text-purple-800";
       case "business":
-        return "bg-orange-100 text-orange-800";
+        return "bg-amber-100 text-amber-800";
       case "enterprise":
         return "bg-red-100 text-red-800";
       default:
@@ -309,7 +309,7 @@ export default function BillingSettingsPage() {
                     {invoice.status === "paid" && (
                       <Badge
                         variant="outline"
-                        className="bg-green-50 text-green-800 border-green-200"
+                        className="bg-emerald-50 text-emerald-800 border-emerald-200"
                       >
                         Paid
                       </Badge>

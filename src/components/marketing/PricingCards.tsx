@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Check } from "lucide-react";
+import { Building2, Check, User } from "lucide-react";
 
 const CREATORS = [
   {
@@ -97,24 +97,26 @@ export function PricingCards() {
           <button
             type="button"
             onClick={() => setAudience("creators")}
-            className={`rounded-lg px-5 py-2 text-sm font-medium transition-all ${
+            className={`inline-flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-medium transition-all ${
               audience === "creators"
-                ? "bg-[#FF6B35] text-white shadow"
+                ? "bg-brand-gradient-animated text-white shadow"
                 : "text-slate-500 hover:text-slate-900"
             }`}
           >
-            👤 Creators &amp; Freelancers
+            <User className="h-4 w-4" strokeWidth={2} />
+            Creators &amp; Freelancers
           </button>
           <button
             type="button"
             onClick={() => setAudience("teams")}
-            className={`rounded-lg px-5 py-2 text-sm font-medium transition-all ${
+            className={`inline-flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-medium transition-all ${
               audience === "teams"
-                ? "bg-[#FF6B35] text-white shadow"
+                ? "bg-brand-gradient-animated text-white shadow"
                 : "text-slate-500 hover:text-slate-900"
             }`}
           >
-            🏢 Teams &amp; Businesses
+            <Building2 className="h-4 w-4" strokeWidth={2} />
+            Teams &amp; Businesses
           </button>
         </div>
       </div>
@@ -130,7 +132,7 @@ export function PricingCards() {
           type="button"
           onClick={() => setYearly((v) => !v)}
           className="relative h-7 w-14 rounded-full transition-colors"
-          style={{ backgroundColor: yearly ? "#FF6B35" : "#CBD5E1" }}
+          style={{ backgroundColor: yearly ? "#2563EB" : "#CBD5E1" }}
           aria-label="Toggle billing period"
         >
           <span
@@ -145,7 +147,7 @@ export function PricingCards() {
         >
           Yearly
         </span>
-        <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">
+        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
           Save 20%
         </span>
       </div>
@@ -168,13 +170,16 @@ export function PricingCards() {
                   : "border border-slate-200 shadow-sm hover:shadow-md",
               ].join(" ")}
               style={
-                plan.highlight ? { border: "2px solid #FF6B35" } : undefined
+                plan.highlight ? { border: "2px solid #2563EB" } : undefined
               }
             >
               {plan.highlight && (
                 <span
                   className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 text-xs font-semibold text-white shadow"
-                  style={{ backgroundColor: "#FF6B35" }}
+                  style={{
+                    background:
+                      "linear-gradient(135deg, #2563EB 0%, #7C3AED 100%)",
+                  }}
                 >
                   {plan.badge}
                 </span>
@@ -214,14 +219,9 @@ export function PricingCards() {
                 className={[
                   "mt-7 rounded-md px-4 py-2.5 text-center text-sm font-semibold transition-all active:scale-[0.98]",
                   plan.ctaStyle === "solid"
-                    ? "text-white shadow hover:shadow-md"
+                    ? "bg-brand-gradient-animated text-white shadow hover:shadow-md hover:opacity-95"
                     : "border border-slate-300 text-slate-900 hover:bg-slate-50",
                 ].join(" ")}
-                style={
-                  plan.ctaStyle === "solid"
-                    ? { backgroundColor: "#FF6B35" }
-                    : undefined
-                }
               >
                 {price === null
                   ? "Contact Sales"
@@ -241,8 +241,7 @@ export function PricingCards() {
       <p className="mt-2 text-center text-sm">
         <Link
           href="/pricing"
-          className="font-medium underline"
-          style={{ color: "#FF6B35" }}
+          className="font-medium text-blue-600 underline hover:text-blue-700"
         >
           See full feature comparison →
         </Link>

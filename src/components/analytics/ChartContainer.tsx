@@ -37,12 +37,12 @@ export interface ChartContainerProps<T extends Record<string, unknown>> {
 
 /* Brand-aligned palette */
 const PALETTE = [
-  "#FF6B00" /* brand saffron */,
-  "#1a1a2e" /* brand dark */,
-  "#3b82f6" /* blue */,
-  "#10b981" /* emerald */,
-  "#f59e0b" /* amber */,
-  "#8b5cf6" /* violet */,
+  "#2563EB" /* brand blue */,
+  "#7C3AED" /* brand purple */,
+  "#0F172A" /* dark navy */,
+  "#10B981" /* emerald */,
+  "#F59E0B" /* amber */,
+  "#0EA5E9" /* sky */,
 ];
 
 const GRID_COLOR = "#e2e8f0";

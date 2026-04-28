@@ -7,12 +7,13 @@ import { User, Building2, Check, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Logo } from "@/components/ui/logo";
 import { createClient } from "@/lib/supabase/client";
 
 type AccountType = "individual" | "team";
 type Step = 0 | 1;
 
-const ORANGE = "#FF6B35";
+const BRAND_BLUE = "#2563EB";
 
 export default function RegisterPage() {
   return (
@@ -113,14 +114,8 @@ function RegisterPageInner() {
   return (
     <div className="flex flex-col items-center">
       <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold">
-          <span className="text-slate-800">Social</span>
-          <span style={{ color: "#FF6B35" }}>Bharat</span>
-          <span aria-hidden className="ml-1">
-            🇮🇳
-          </span>
-        </h1>
-        <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">
+        <Logo variant="default" size="md" />
+        <p className="text-sm text-slate-600 mt-2">
           India&apos;s Social Media Platform
         </p>
       </div>
@@ -169,8 +164,7 @@ function PathSelection({
       </div>
 
       <Button
-        className="w-full gap-2 font-semibold text-white"
-        style={{ backgroundColor: ORANGE }}
+        className="w-full gap-2 font-semibold text-white bg-brand-gradient-animated hover:opacity-95"
         disabled={!selected}
         onClick={onContinue}
       >
@@ -200,22 +194,22 @@ function PathCard({
     <button
       type="button"
       onClick={onSelect}
-      className="relative flex flex-col items-start rounded-xl border-2 p-4 text-left transition-all hover:border-orange-300"
+      className="relative flex flex-col items-start rounded-xl border-2 p-4 text-left transition-all hover:border-blue-300"
       style={
         selected
-          ? { borderColor: ORANGE, backgroundColor: "#FFF4EC" }
+          ? { borderColor: BRAND_BLUE, backgroundColor: "#EFF6FF" }
           : { borderColor: "#E2E8F0", backgroundColor: "#fff" }
       }
     >
       {selected && (
         <span
           className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full text-white"
-          style={{ backgroundColor: ORANGE }}
+          style={{ backgroundColor: BRAND_BLUE }}
         >
           <Check className="h-3 w-3" />
         </span>
       )}
-      <span style={{ color: selected ? ORANGE : "#64748B" }}>{icon}</span>
+      <span style={{ color: selected ? BRAND_BLUE : "#64748B" }}>{icon}</span>
       <p className="mt-3 text-sm font-semibold text-slate-900">{title}</p>
       <p className="mt-1 text-xs leading-relaxed text-slate-500">{subtitle}</p>
       <p className="mt-2 text-[10px] font-medium text-slate-400">{tags}</p>
@@ -355,8 +349,7 @@ function SignUpForm({
       {error && <p className="text-sm text-destructive">{error}</p>}
 
       <Button
-        className="w-full gap-2 font-semibold text-white"
-        style={{ backgroundColor: ORANGE }}
+        className="w-full gap-2 font-semibold text-white bg-brand-gradient-animated hover:opacity-95"
         disabled={loading || !canSubmit}
         onClick={onRegister}
       >
@@ -368,7 +361,7 @@ function SignUpForm({
         Already have an account?{" "}
         <Link
           href="/login"
-          className="font-medium text-slate-600 hover:underline"
+          className="font-medium text-blue-600 hover:text-blue-700"
         >
           Sign in
         </Link>

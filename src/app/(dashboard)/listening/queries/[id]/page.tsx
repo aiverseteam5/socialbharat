@@ -78,7 +78,7 @@ interface Pagination {
 }
 
 const SENTIMENT_COLORS: Record<string, string> = {
-  positive: "bg-green-100 text-green-800",
+  positive: "bg-emerald-100 text-emerald-800",
   negative: "bg-red-100 text-red-800",
   neutral: "bg-gray-100 text-gray-800",
   mixed: "bg-yellow-100 text-yellow-800",
@@ -296,12 +296,12 @@ export default function QueryDetailPage() {
                 return (
                   <div key={label} className="flex items-center gap-2 mb-2">
                     <div
-                      className={`w-3 h-3 rounded-full ${label === "positive" ? "bg-green-500" : label === "negative" ? "bg-red-500" : label === "mixed" ? "bg-yellow-500" : "bg-gray-400"}`}
+                      className={`w-3 h-3 rounded-full ${label === "positive" ? "bg-emerald-500" : label === "negative" ? "bg-red-500" : label === "mixed" ? "bg-yellow-500" : "bg-gray-400"}`}
                     />
                     <span className="text-sm capitalize w-16">{label}</span>
                     <div className="flex-1 bg-muted rounded-full h-2">
                       <div
-                        className={`h-2 rounded-full ${label === "positive" ? "bg-green-500" : label === "negative" ? "bg-red-500" : label === "mixed" ? "bg-yellow-500" : "bg-gray-400"}`}
+                        className={`h-2 rounded-full ${label === "positive" ? "bg-emerald-500" : label === "negative" ? "bg-red-500" : label === "mixed" ? "bg-yellow-500" : "bg-gray-400"}`}
                         style={{ width: `${pct}%` }}
                       />
                     </div>

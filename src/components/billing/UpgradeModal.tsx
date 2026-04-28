@@ -69,10 +69,10 @@ export function UpgradeModal() {
           <div
             className="rounded-t-xl p-6 text-white"
             style={{
-              background: "linear-gradient(135deg, #1A1A2E 0%, #2D2D4E 100%)",
+              background: "linear-gradient(135deg, #2563EB 0%, #7C3AED 100%)",
             }}
           >
-            <Sparkles className="h-6 w-6 text-orange-400" aria-hidden />
+            <Sparkles className="h-6 w-6 text-white/90" aria-hidden />
             <DialogPrimitive.Title className="mt-3 text-xl font-bold text-white">
               {featureName}
             </DialogPrimitive.Title>
@@ -104,14 +104,14 @@ export function UpgradeModal() {
               ))}
             </ul>
 
-            <div className="mt-5 flex items-center justify-between rounded-xl border border-orange-200 bg-orange-50 p-4">
+            <div className="mt-5 flex items-center justify-between rounded-xl border border-blue-200 bg-blue-50 p-4">
               <div>
-                <p className="text-sm font-medium text-orange-700">
+                <p className="text-sm font-medium text-blue-700">
                   {plan.label}
                 </p>
-                <p className="text-2xl font-bold text-orange-600">
+                <p className="text-2xl font-bold text-blue-600">
                   ₹{plan.price.toLocaleString("en-IN")}
-                  <span className="ml-0.5 text-sm font-semibold text-orange-500">
+                  <span className="ml-0.5 text-sm font-semibold text-blue-500">
                     /month
                   </span>
                 </p>
@@ -119,7 +119,7 @@ export function UpgradeModal() {
                   Billed monthly · GST invoice included
                 </p>
               </div>
-              <span className="rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-700">
+              <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
                 Save 20% yearly
               </span>
             </div>
@@ -129,7 +129,7 @@ export function UpgradeModal() {
             <Link
               href="/settings/billing"
               onClick={closeUpgradeModal}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 py-3 text-sm font-semibold text-white shadow-md transition-all hover:bg-orange-600 hover:shadow-lg active:scale-[0.99]"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-gradient-animated px-4 py-3 text-sm font-semibold text-white shadow-md transition-all hover:opacity-95 hover:shadow-lg active:scale-[0.99]"
             >
               Upgrade to {plan.label}
               <ArrowRight className="h-4 w-4" aria-hidden />

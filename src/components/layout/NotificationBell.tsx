@@ -46,13 +46,13 @@ function NotifIcon({ type }: { type: string }) {
   const t = type as NotificationType;
   const cls = "w-4 h-4 shrink-0";
   if (t === "post_published")
-    return <CheckCircle className={`${cls} text-green-500`} />;
+    return <CheckCircle className={`${cls} text-emerald-500`} />;
   if (t === "post_failed")
     return <AlertCircle className={`${cls} text-red-500`} />;
   if (t === "post_approved")
     return <FileCheck className={`${cls} text-blue-500`} />;
   if (t === "post_rejected")
-    return <AlertCircle className={`${cls} text-orange-500`} />;
+    return <AlertCircle className={`${cls} text-amber-500`} />;
   if (t === "post_approval_requested")
     return <FileCheck className={`${cls} text-purple-500`} />;
   if (t === "inbox_message")

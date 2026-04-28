@@ -38,19 +38,19 @@ export function FestivalSuggestions() {
   const f = festivals[0]!;
 
   return (
-    <Card className="p-4 bg-gradient-to-r from-orange-100 to-yellow-100 border-orange-300">
+    <Card className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
       <div className="flex items-start gap-3">
-        <Sparkles className="w-5 h-5 text-orange-600 mt-0.5" />
+        <Sparkles className="w-5 h-5 text-blue-600 mt-0.5" />
         <div className="flex-1">
-          <h3 className="font-semibold text-orange-900">Upcoming Festival</h3>
+          <h3 className="font-semibold text-slate-900">Upcoming Festival</h3>
           <div className="mt-2">
-            <p className="text-sm text-orange-800">
+            <p className="text-sm text-slate-800">
               <span className="font-medium">{f.name}</span>
               {f.name_hi && (
-                <span className="ml-2 text-orange-700">({f.name_hi})</span>
+                <span className="ml-2 text-slate-600">({f.name_hi})</span>
               )}
             </p>
-            <p className="text-xs text-orange-700 mt-1">
+            <p className="text-xs text-slate-600 mt-1">
               {new Date(f.festival_date + "T00:00:00").toLocaleDateString(
                 "en-IN",
                 {
@@ -63,7 +63,7 @@ export function FestivalSuggestions() {
               {f.suggested_hashtags.slice(0, 3).map((tag) => (
                 <span
                   key={tag}
-                  className="text-xs bg-orange-200 px-2 py-0.5 rounded"
+                  className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded"
                 >
                   {tag}
                 </span>

@@ -14,6 +14,7 @@ import { createMetricsWorker } from "@/lib/queue/workers/metrics-worker";
 import { createTokenRefreshWorker } from "@/lib/queue/workers/token-refresh-worker";
 import { createNotificationWorker } from "@/lib/queue/workers/notification-worker";
 import { createAgentWorker } from "@/lib/queue/workers/agent-worker";
+import { createBroadcastWorker } from "@/lib/queue/workers/broadcast-worker";
 
 async function main() {
   logger.info("Starting SocialBharat workers", {
@@ -27,6 +28,7 @@ async function main() {
     createTokenRefreshWorker(),
     createNotificationWorker(),
     createAgentWorker(),
+    createBroadcastWorker(),
   ];
 
   const shutdown = async (signal: string) => {

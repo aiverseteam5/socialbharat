@@ -10,6 +10,7 @@ export type InboxPlatform =
 export type ConversationStatus = "open" | "assigned" | "closed" | "snoozed";
 export type ConversationType = "message" | "comment" | "mention" | "review";
 export type SenderType = "contact" | "agent" | "system";
+export type DeliveryStatus = "sent" | "delivered" | "read" | "failed";
 
 export interface ContactSummary {
   id: string;
@@ -50,6 +51,9 @@ export interface InboxMessage {
   is_read: boolean;
   metadata: Record<string, unknown>;
   created_at: string;
+  delivery_status?: DeliveryStatus;
+  delivered_at?: string | null;
+  read_at?: string | null;
 }
 
 export interface InboxFilters {
@@ -71,6 +75,7 @@ interface InboxState {
   selectConversation: (id: string | null) => void;
   setMessages: (m: InboxMessage[]) => void;
   appendMessage: (m: InboxMessage) => void;
+  patchMessage: (id: string, partial: Partial<InboxMessage>) => void;
   setFilters: (f: InboxFilters) => void;
   setLoading: (loading: boolean) => void;
   reset: () => void;
@@ -98,6 +103,14 @@ export const useInboxStore = create<InboxState>((set) => ({
     set((state) => {
       if (state.messages.some((m) => m.id === message.id)) return {};
       return { messages: [...state.messages, message] };
+    }),
+  patchMessage: (id, partial) =>
+    set((state) => {
+      const idx = state.messages.findIndex((m) => m.id === id);
+      if (idx === -1) return {};
+      const next = [...state.messages];
+      next[idx] = { ...next[idx]!, ...partial };
+      return { messages: next };
     }),
   setFilters: (filters) => set({ filters }),
   setLoading: (isLoading) => set({ isLoading }),
